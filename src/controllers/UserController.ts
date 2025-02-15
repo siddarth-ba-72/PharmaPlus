@@ -12,7 +12,6 @@ import { UserRequestModel } from "../models/UserHttpModels/UserRequestModel";
 import { UserPasswordUpdateRequest } from "../models/UserHttpModels/UserPasswordUpdateRequest";
 import { UserResetPasswordModel } from "../models/UserHttpModels/UserResetPasswordModel";
 
-
 export class UserController {
 
 	private userService: UserService;
@@ -61,18 +60,23 @@ export class UserController {
 	*/
 	public getCurrentUser = async (req: Request, res: Response): Promise<void> => {
 		try {
-			this.logger.logInfo("Getting logged in user");
-			const user = await this.userService.findLoggedInUser(req);
-			if (!user) {
-				this.logger.logError("User not found");
+			if (this.userService) {
+				this.logger.logInfo("Getting logged in user");
+				const user = await this.userService.findLoggedInUser(req);
+				if (!user) {
+					this.logger.logError("User not found");
+					res.status(HttpResponseStatusCodesConstants.NOT_FOUND_FAILURE)
+						.json({ error: "User not found" });
+					return;
+				}
+				const userResponse = await this.userMapper.mapToUserResponse(user);
+				res.status(HttpResponseStatusCodesConstants.RETRIEVED_SUCCESS)
+					.json({ user: userResponse });
+			} else {
+				this.logger.logError("User service not autowired properly");
 				res.status(HttpResponseStatusCodesConstants.NOT_FOUND_FAILURE)
-					.json({ error: "User not found" });
-				return;
+					.json({ message: "User service not autowired properly" });
 			}
-			const userResponse = await this.userMapper.mapToUserResponse(user);
-			res.status(HttpResponseStatusCodesConstants.RETRIEVED_SUCCESS)
-				.json({ user: userResponse });
-
 		} catch (error: any) {
 			this.logger.logError(error.message);
 			res.status(HttpResponseStatusCodesConstants.INTERNAL_SERVER_FAILURE)
@@ -117,9 +121,9 @@ export class UserController {
 						.json({ message: "User registration failed" });
 				}
 			} else {
-				this.logger.logError("User repository not autowired properly");
+				this.logger.logError("User service not autowired properly");
 				res.status(HttpResponseStatusCodesConstants.NOT_FOUND_FAILURE)
-					.json({ message: "User repository not autowired properly" });
+					.json({ message: "User service not autowired properly" });
 			}
 		} catch (error: any) {
 			this.logger.logError(error.message);
@@ -165,9 +169,9 @@ export class UserController {
 				res.status(HttpResponseStatusCodesConstants.CREATED_SUCCESS)
 					.json({ user: userResponse });
 			} else {
-				this.logger.logError("User repository not autowired properly");
+				this.logger.logError("User service not autowired properly");
 				res.status(HttpResponseStatusCodesConstants.NOT_FOUND_FAILURE)
-					.json({ message: "User repository not autowired properly" });
+					.json({ message: "User service not autowired properly" });
 			}
 		} catch (error: any) {
 			this.logger.logError(error.message);
@@ -207,9 +211,9 @@ export class UserController {
 				res.status(HttpResponseStatusCodesConstants.CREATED_SUCCESS)
 					.json({ user: userResponse });
 			} else {
-				this.logger.logError("User repository not autowired properly");
+				this.logger.logError("User service not autowired properly");
 				res.status(HttpResponseStatusCodesConstants.NOT_FOUND_FAILURE)
-					.json({ message: "User repository not autowired properly" });
+					.json({ message: "User service not autowired properly" });
 			}
 		} catch (error: any) {
 			this.logger.logError(error.message);
@@ -258,9 +262,9 @@ export class UserController {
 				res.status(HttpResponseStatusCodesConstants.CREATED_SUCCESS)
 					.json({ user: userResponse });
 			} else {
-				this.logger.logError("User repository not autowired properly");
+				this.logger.logError("User service not autowired properly");
 				res.status(HttpResponseStatusCodesConstants.NOT_FOUND_FAILURE)
-					.json({ message: "User repository not autowired properly" });
+					.json({ message: "User service not autowired properly" });
 			}
 		} catch (error: any) {
 			this.logger.logError(error.message);
@@ -293,9 +297,9 @@ export class UserController {
 				res.status(HttpResponseStatusCodesConstants.RETRIEVED_SUCCESS)
 					.json({ reset_password_token: token });
 			} else {
-				this.logger.logError("User repository not autowired properly");
+				this.logger.logError("User service not autowired properly");
 				res.status(HttpResponseStatusCodesConstants.NOT_FOUND_FAILURE)
-					.json({ message: "User repository not autowired properly" });
+					.json({ message: "User service not autowired properly" });
 			}
 		} catch (error: any) {
 			this.logger.logError(error.message);
@@ -341,9 +345,9 @@ export class UserController {
 						user: userResponse
 					});
 			} else {
-				this.logger.logError("User repository not autowired properly");
+				this.logger.logError("User service not autowired properly");
 				res.status(HttpResponseStatusCodesConstants.NOT_FOUND_FAILURE)
-					.json({ message: "User repository not autowired properly" });
+					.json({ message: "User service not autowired properly" });
 			}
 		} catch (error: any) {
 			this.logger.logError(error.message);

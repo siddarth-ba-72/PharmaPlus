@@ -1,17 +1,14 @@
+import { CartRequestModel } from "../models/CartHttpModels/CartRequestModel";
 import { CartSchema } from "../schema/CartSchema";
-import { DataSource, Repository } from "typeorm";
-import DatabaseConnection from "../middlewares/DatabaseConnection";
-import { MedicineStockSchema } from "../schema/MedicineStockSchema";
 
-export class CartDao {
+export interface CartDao {
 
-    private dataSource: DataSource;
-    public cartDao: Repository<CartSchema>;
-    public stockDao: Repository<MedicineStockSchema>;
+    findUserCartItemsByUserCode(userCode: string): Promise<CartSchema[] | null>;
 
-    constructor() {
-        this.dataSource = DatabaseConnection.getInstance().getDataSource();
-        this.cartDao = this.dataSource.getRepository(CartSchema);
-        this.stockDao = this.dataSource.getRepository(MedicineStockSchema);
-    }
+    addNewItemToUserCart(cartRequestModel: CartRequestModel, userCode: string): Promise<CartSchema>;
+
+    updateUserCartItem(cartItem: CartSchema, cartRequestModel: CartRequestModel): Promise<CartSchema>;
+
+    removeUserCartItem(cartItem: CartSchema): Promise<void>;
+
 }

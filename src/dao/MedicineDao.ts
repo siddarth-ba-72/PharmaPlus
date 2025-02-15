@@ -1,21 +1,19 @@
-import { DataSource, Repository } from "typeorm";
+import { MedicineRequestModel } from "../models/MedicineHttpModels/MedicineRequestModel";
+import { MedicineUpdateRequestModel } from "../models/MedicineHttpModels/MedicineUpdateRequestModel";
 import { MedicineSchema } from "../schema/MedicineSchema";
-import { MedicineStockSchema } from "../schema/MedicineStockSchema";
-import { MedicineCategorySchema } from "../schema/MedicineCategorySchema";
-import DatabaseConnection from "../middlewares/DatabaseConnection";
 
-export class MedicineDao {
+export interface MedicineDao {
 
-    private dataSource: DataSource;
-    public medicineDao: Repository<MedicineSchema>;
-    public medicineCategoryDao: Repository<MedicineCategorySchema>;
-    public medicineStockDao: Repository<MedicineStockSchema>;
+    findAllMedicines(): Promise<MedicineSchema[]>;
 
-    constructor() {
-        this.dataSource = DatabaseConnection.getInstance().getDataSource();
-        this.medicineDao = this.dataSource.getRepository(MedicineSchema);
-        this.medicineCategoryDao = this.dataSource.getRepository(MedicineCategorySchema);
-        this.medicineStockDao = this.dataSource.getRepository(MedicineStockSchema);
-    }
+    findMedicineByMedicineName(medicineName: string): Promise<MedicineSchema | null>;
+
+    findMedicineByMedicineCode(medicineCode: string): Promise<MedicineSchema | null>;
+
+    addMedicine(medicineRequest: MedicineRequestModel): Promise<MedicineSchema>;
+
+    updateMedicineDetails(medicine: MedicineSchema, medicineRequest: MedicineUpdateRequestModel): Promise<MedicineSchema>;
+
+    deleteMedicineRecord(medicine: MedicineSchema): Promise<void>;
 
 }

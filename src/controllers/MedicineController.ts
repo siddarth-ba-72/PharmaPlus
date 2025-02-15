@@ -1,22 +1,25 @@
 import { Request, Response } from "express";
 import { ApplicationLogger } from "../utils/ApplicationLogger";
-import { MedicineDao } from "../dao/MedicineDao";
 import { HttpResponseStatusCodesConstants } from "../utils/HttpResponseStatusCodesConstants";
 import { MedicineMapper } from "../mappers/MedicineMapper";
 import { MedicineRequestModel } from "../models/MedicineHttpModels/MedicineRequestModel";
-import { MedicineSchema } from "../schema/MedicineSchema";
 import { MedicineResponseModel } from "../models/MedicineHttpModels/MedicineResponseModel";
 import { MedicineUpdateRequestModel } from "../models/MedicineHttpModels/MedicineUpdateRequestModel";
+import { MedicineService } from "../services/MedicineService";
+import { StockService } from "../services/StockService";
 
-export class MedicineController extends MedicineDao {
+export class MedicineController {
 
-    private logger: ApplicationLogger;
+    private medicineService: MedicineService;
+    private stockService: StockService;
     private medicineMapper: MedicineMapper;
+    private logger: ApplicationLogger;
 
     constructor() {
-        super();
-        this.logger = new ApplicationLogger();
+        this.medicineService = new MedicineService();
+        this.stockService = new StockService();
         this.medicineMapper = new MedicineMapper();
+        this.logger = new ApplicationLogger();
     }
 
     /*
@@ -25,8 +28,8 @@ export class MedicineController extends MedicineDao {
     */
     public getAllMedicines = async (req: Request, res: Response): Promise<void> => {
         try {
-            if (this.medicineDao && this.medicineCategoryDao) {
-                const medicines = await this.medicineDao.find();
+            if (this.medicineService) {
+                const medicines = await this.medicineService.findAllMedicines();
                 if (medicines.length === 0) {
                     this.logger.logInfo("No medicines found");
                     res.status(HttpResponseStatusCodesConstants.NO_CONTENT_SUCCESS)
@@ -38,9 +41,9 @@ export class MedicineController extends MedicineDao {
                         .json({ medicines: medicinesResponse });
                 }
             } else {
-                this.logger.logError("Medicine repository not found");
+                this.logger.logError("Medicine service not autowired properly");
                 res.status(HttpResponseStatusCodesConstants.NOT_FOUND_FAILURE)
-                    .json({ message: "Medicine repository not found" });
+                    .json({ message: "Medicine service not autowired properly" });
             }
         } catch (error: any) {
             this.logger.logError(error.message);
@@ -55,11 +58,9 @@ export class MedicineController extends MedicineDao {
     */
     public addMedicine = async (req: Request, res: Response): Promise<void> => {
         try {
-            if (this.medicineDao) {
+            if (this.medicineService) {
                 const medicineRequest: MedicineRequestModel = req.body as MedicineRequestModel;
-                const existingMedicine = await this.medicineDao.findOne({
-                    where: { medicineName: medicineRequest.medicineName }
-                });
+                const existingMedicine = await this.medicineService.findMedicineByMedicineName(medicineRequest.medicineName);
                 if (existingMedicine) {
                     this.logger.logError("Medicine already exists");
                     res.status(HttpResponseStatusCodesConstants.NOT_ALLOWED_FAILURE).json({
@@ -67,16 +68,15 @@ export class MedicineController extends MedicineDao {
                     });
                     return;
                 }
-                const medicine: MedicineSchema = await this.medicineMapper.toMedicineEntity(medicineRequest);
-                const savedMedicine = await this.medicineDao.save(medicine);
+                const savedMedicine = await this.medicineService.addMedicine(medicineRequest);
                 const medicineResponse: MedicineResponseModel = await this.medicineMapper.mapToMedicineResponse(savedMedicine);
                 this.logger.logInfo(`Medicine ${savedMedicine.medicineName} saved successfully`);
                 res.status(HttpResponseStatusCodesConstants.CREATED_SUCCESS)
                     .json({ medicine: medicineResponse });
             } else {
-                this.logger.logError("Medicine repository not found");
+                this.logger.logError("Medicine service not autowired properly");
                 res.status(HttpResponseStatusCodesConstants.NOT_FOUND_FAILURE)
-                    .json({ message: "Medicine repository not found" });
+                    .json({ message: "Medicine service not autowired properly" });
             }
         } catch (error: any) {
             this.logger.logError(error.message);
@@ -91,13 +91,9 @@ export class MedicineController extends MedicineDao {
     */
     public updateMedicine = async (req: Request, res: Response): Promise<void> => {
         try {
-            if (this.medicineDao) {
+            if (this.medicineService) {
                 const medicineCode = req.query.medicineCode as string;
-                const medicine = await this.medicineDao.findOne({
-                    where: {
-                        medicineCode: medicineCode
-                    }
-                });
+                const medicine = await this.medicineService.findMedicineByMedicineCode(medicineCode);
                 if (!medicine) {
                     this.logger.logError("Medicine not found");
                     res.status(HttpResponseStatusCodesConstants.NOT_FOUND_FAILURE)
@@ -105,17 +101,14 @@ export class MedicineController extends MedicineDao {
                     return;
                 }
                 const medicineUpdateReq: MedicineUpdateRequestModel = req.body as MedicineUpdateRequestModel;
-                medicine.medicineName = medicineUpdateReq.medicineName;
-                medicine.composition = medicineUpdateReq.composition;
-                medicine.category = { categoryCode: medicineUpdateReq.categoryCode } as any;
-                await this.medicineDao.save(medicine);
+                await this.medicineService.updateMedicineDetails(medicine, medicineUpdateReq);
                 const medicineResponse: MedicineResponseModel = await this.medicineMapper.mapToMedicineResponse(medicine);
                 res.status(HttpResponseStatusCodesConstants.CREATED_SUCCESS)
                     .json({ medicine: medicineResponse });
             } else {
-                this.logger.logError("Medicine repository not found");
+                this.logger.logError("Medicine service not autowired properly");
                 res.status(HttpResponseStatusCodesConstants.NOT_FOUND_FAILURE)
-                    .json({ message: "Medicine repository not found" });
+                    .json({ message: "Medicine service not autowired properly" });
             }
         } catch (error: any) {
             this.logger.logError(error.message);
@@ -130,38 +123,28 @@ export class MedicineController extends MedicineDao {
     */
     public deleteMedicine = async (req: Request, res: Response): Promise<void> => {
         try {
-            if (this.medicineDao && this.medicineStockDao) {
+            if (this.medicineService && this.stockService) {
                 const medicineCode = req.query.medicineCode as string;
-                const medicine = await this.medicineDao.findOne({
-                    where: {
-                        medicineCode: medicineCode
-                    }
-                });
+                const medicine = await this.medicineService.findMedicineByMedicineCode(medicineCode);
                 if (!medicine) {
                     this.logger.logError("Medicine not found");
                     res.status(HttpResponseStatusCodesConstants.NOT_FOUND_FAILURE)
                         .json({ message: "Medicine not found" });
                     return;
                 }
-                const medicineStock = await this.medicineStockDao.findOne({
-                    where: {
-                        medicine: {
-                            medicineCode: medicineCode
-                        }
-                    }
-                });
+                const medicineStock = await this.stockService.findMedicineStockByMedicineCode(medicineCode);
                 if (medicineStock) {
-                    await this.medicineStockDao.remove(medicineStock);
+                    await this.stockService.deleteMedicineStock(medicineStock);
                     this.logger.logDebug(`Medicine stock for ${medicine.medicineName} deleted succesfully`);
                 }
-                await this.medicineDao.remove(medicine);
+                await this.medicineService.deleteMedicineRecord(medicine);
                 this.logger.logDebug(`Medicine ${medicine.medicineName} deleted successfully`);
                 res.status(HttpResponseStatusCodesConstants.RETRIEVED_SUCCESS)
                     .json({ message: `Medicine record for ${medicine.medicineName} deleted successfully!` });
             } else {
-                this.logger.logError("Medicine repository not found");
+                this.logger.logError("Medicine service not autowired properly");
                 res.status(HttpResponseStatusCodesConstants.NOT_FOUND_FAILURE)
-                    .json({ message: "Medicine repository not found" });
+                    .json({ message: "Medicine service not autowired properly" });
             }
         } catch (error: any) {
             this.logger.logError(error.message);
