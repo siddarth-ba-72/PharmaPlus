@@ -1,28 +1,28 @@
 import { Request, Response } from "express";
-import bcrypt from "bcryptjs";
-import { UserSchema } from "../schema/UserSchema";
 import { ApplicationLogger } from "../utils/ApplicationLogger";
 import { UserMapper } from "../mappers/UserMapper";
+import { UserResponseModel } from "../models/UserHttpModels/UserResponseModel";
+import { HttpResponseStatusCodesConstants } from "../utils/HttpResponseStatusCodesConstants";
+import { UserService } from "../services/UserService";
+import { UserSchema } from "../schema/UserSchema";
 import { UserRegisterRequestModel } from "../models/UserHttpModels/UserRegisterRequestModel";
 import { JwtAuthentication } from "../utils/JwtAuthentication";
 import { UserLoginRequestModel } from "../models/UserHttpModels/UserLoginRequestModel";
-import { UserResponseModel } from "../models/UserHttpModels/UserResponseModel";
-import { UserDao } from "../dao/UserDao";
 import { UserRequestModel } from "../models/UserHttpModels/UserRequestModel";
-import { HttpResponseStatusCodesConstants } from "../utils/HttpResponseStatusCodesConstants";
 import { UserPasswordUpdateRequest } from "../models/UserHttpModels/UserPasswordUpdateRequest";
 import { UserResetPasswordModel } from "../models/UserHttpModels/UserResetPasswordModel";
 
 
-export class UserController extends UserDao {
+export class UserController {
 
-	private logger: ApplicationLogger;
+	private userService: UserService;
 	private userMapper: UserMapper;
+	private logger: ApplicationLogger;
 
 	constructor() {
-		super();
-		this.logger = new ApplicationLogger();
+		this.userService = new UserService();
 		this.userMapper = new UserMapper();
+		this.logger = new ApplicationLogger();
 	}
 
 	/*
@@ -31,8 +31,8 @@ export class UserController extends UserDao {
 	*/
 	public getAllUsers = async (req: Request, res: Response): Promise<void> => {
 		try {
-			if (this.userDao) {
-				const users = await this.userDao.find();
+			if (this.userService) {
+				const users = await this.userService.findAllUsers();
 				if (users.length === 0) {
 					this.logger.logInfo("No users found");
 					res.status(HttpResponseStatusCodesConstants.NO_CONTENT_SUCCESS)
@@ -44,9 +44,9 @@ export class UserController extends UserDao {
 						.json({ users: userResponse });
 				}
 			} else {
-				this.logger.logError("User repository not found");
+				this.logger.logError("User service not autowired properly");
 				res.status(HttpResponseStatusCodesConstants.NOT_FOUND_FAILURE)
-					.json({ message: "User repository not found" });
+					.json({ message: "User service not autowired properly" });
 			}
 		} catch (error: any) {
 			this.logger.logError(error.message);
@@ -61,18 +61,18 @@ export class UserController extends UserDao {
 	*/
 	public getCurrentUser = async (req: Request, res: Response): Promise<void> => {
 		try {
-			if (req.body.user) {
-				this.logger.logInfo("Getting logged in user");
-				const user = req.body.user as UserSchema;
-
-				const userResponse = await this.userMapper.mapToUserResponse(user);
-				res.status(HttpResponseStatusCodesConstants.RETRIEVED_SUCCESS)
-					.json({ user: userResponse });
-			} else {
+			this.logger.logInfo("Getting logged in user");
+			const user = await this.userService.findLoggedInUser(req);
+			if (!user) {
 				this.logger.logError("User not found");
 				res.status(HttpResponseStatusCodesConstants.NOT_FOUND_FAILURE)
-					.json({ message: "Please login" });
+					.json({ error: "User not found" });
+				return;
 			}
+			const userResponse = await this.userMapper.mapToUserResponse(user);
+			res.status(HttpResponseStatusCodesConstants.RETRIEVED_SUCCESS)
+				.json({ user: userResponse });
+
 		} catch (error: any) {
 			this.logger.logError(error.message);
 			res.status(HttpResponseStatusCodesConstants.INTERNAL_SERVER_FAILURE)
@@ -87,12 +87,9 @@ export class UserController extends UserDao {
 	*/
 	public registerUser = async (req: Request, res: Response): Promise<void> => {
 		try {
-			if (this.userDao) {
+			if (this.userService) {
 				const userReq = req.body as UserRegisterRequestModel;
-
-				const existingUser = await this.userDao.findOne({
-					where: { username: userReq.userName }
-				});
+				const existingUser = await this.userService.findUserByUserName(userReq.userName);
 				if (existingUser) {
 					this.logger.logError("Username already exists. Please choose a different username");
 					res.status(HttpResponseStatusCodesConstants.NOT_ALLOWED_FAILURE).json({
@@ -100,12 +97,8 @@ export class UserController extends UserDao {
 					});
 					return;
 				}
-
 				res.clearCookie("auth_token");
-
-				const user: UserSchema = await this.userMapper.toUserEntity(userReq);
-				const savedUser = await this.userDao.save(user);
-
+				const savedUser = await this.userService.addUser(userReq);
 				if (savedUser) {
 					const token = await JwtAuthentication.generateToken(savedUser.userId);
 					res.cookie("auth_token", token, {
@@ -114,8 +107,7 @@ export class UserController extends UserDao {
 						maxAge: 3600000, // 1 hour
 						sameSite: "strict",
 					});
-
-					const userResponse = await this.userMapper.mapToUserResponse(user);
+					const userResponse = await this.userMapper.mapToUserResponse(savedUser);
 					this.logger.logInfo(`User ${savedUser.username} registered successfully`);
 					res.status(HttpResponseStatusCodesConstants.CREATED_SUCCESS)
 						.json({ user: userResponse });
@@ -125,9 +117,9 @@ export class UserController extends UserDao {
 						.json({ message: "User registration failed" });
 				}
 			} else {
-				this.logger.logError("User repository not found");
+				this.logger.logError("User repository not autowired properly");
 				res.status(HttpResponseStatusCodesConstants.NOT_FOUND_FAILURE)
-					.json({ message: "User repository not found" });
+					.json({ message: "User repository not autowired properly" });
 			}
 		} catch (error: any) {
 			this.logger.logError(error.message);
@@ -142,13 +134,9 @@ export class UserController extends UserDao {
 	*/
 	public loginUser = async (req: Request, res: Response): Promise<void> => {
 		try {
-			if (this.userDao) {
+			if (this.userService) {
 				const userReq = req.body as UserLoginRequestModel;
-
-				const user = await this.userDao.createQueryBuilder("user")
-					.where("LOWER(user.username) = LOWER(:username)", { username: userReq.userName })
-					.getOne();
-
+				const user = await this.userService.findUserByUserName(userReq.userName);
 				if (!user) {
 					this.logger.logError("User not found");
 					res.clearCookie("auth_token");
@@ -156,8 +144,7 @@ export class UserController extends UserDao {
 						.json({ message: "Invalid username" });
 					return;
 				}
-
-				const isPasswordValid = await bcrypt.compare(userReq.password, user.password);
+				const isPasswordValid = await this.userService.isValidPassword(userReq.password, user.password);
 				if (!isPasswordValid) {
 					this.logger.logError("Invalid Password");
 					res.clearCookie("auth_token");
@@ -165,9 +152,7 @@ export class UserController extends UserDao {
 						.json({ message: "Invalid Password" });
 					return;
 				}
-
 				res.clearCookie("auth_token");
-
 				const token = await JwtAuthentication.generateToken(user.userId);
 				res.cookie("auth_token", token, {
 					httpOnly: true,
@@ -175,15 +160,14 @@ export class UserController extends UserDao {
 					maxAge: 3600000, // 1 hour
 					sameSite: "strict",
 				});
-
 				const userResponse = await this.userMapper.mapToUserResponse(user);
 				this.logger.logInfo(`User ${user.username} logged in successfully`);
 				res.status(HttpResponseStatusCodesConstants.CREATED_SUCCESS)
 					.json({ user: userResponse });
 			} else {
-				this.logger.logError("User repository not found");
+				this.logger.logError("User repository not autowired properly");
 				res.status(HttpResponseStatusCodesConstants.NOT_FOUND_FAILURE)
-					.json({ message: "User repository not found" });
+					.json({ message: "User repository not autowired properly" });
 			}
 		} catch (error: any) {
 			this.logger.logError(error.message);
@@ -208,26 +192,24 @@ export class UserController extends UserDao {
 	*/
 	public updateUserDetails = async (req: Request, res: Response): Promise<void> => {
 		try {
-			if (this.userDao) {
+			if (this.userService) {
 				const userReq = req.body as UserRequestModel;
-				const user = req.body.user as UserSchema;
-
-				user.firstName = userReq.firstName;
-				user.lastName = userReq.lastName;
-				user.age = userReq.age;
-				user.emailId = userReq.emailId;
-				user.updatedAt = new Date();
-
-				const updatedUser = await this.userDao.save(user);
+				const user = await this.userService.findLoggedInUser(req);
+				if (!user) {
+					this.logger.logError("User not found");
+					res.status(HttpResponseStatusCodesConstants.NOT_FOUND_FAILURE)
+						.json({ error: "User not found" });
+					return;
+				}
+				const updatedUser = await this.userService.updateUserDetails(user, userReq);
 				const userResponse = await this.userMapper.mapToUserResponse(updatedUser);
-
 				this.logger.logInfo("User details updated successfully")
 				res.status(HttpResponseStatusCodesConstants.CREATED_SUCCESS)
 					.json({ user: userResponse });
-			}
-			else {
+			} else {
+				this.logger.logError("User repository not autowired properly");
 				res.status(HttpResponseStatusCodesConstants.NOT_FOUND_FAILURE)
-					.json({ error: "UserDao not autowired" });
+					.json({ message: "User repository not autowired properly" });
 			}
 		} catch (error: any) {
 			this.logger.logError(error.message);
@@ -242,11 +224,16 @@ export class UserController extends UserDao {
 	*/
 	public updateUserPassword = async (req: Request, res: Response): Promise<void> => {
 		try {
-			if (this.userDao) {
+			if (this.userService) {
 				const passwordChangeReq = req.body as UserPasswordUpdateRequest;
-				const user = req.body.user as UserSchema;
-
-				const isPasswordValid = await bcrypt.compare(passwordChangeReq.oldPassword, user.password);
+				const user = await this.userService.findLoggedInUser(req);
+				if (!user) {
+					this.logger.logError("User not found");
+					res.status(HttpResponseStatusCodesConstants.NOT_FOUND_FAILURE)
+						.json({ error: "User not found" });
+					return;
+				}
+				const isPasswordValid = await this.userService.isValidPassword(passwordChangeReq.oldPassword, user.password);
 				if (!isPasswordValid) {
 					this.logger.logError("Invalid Password");
 					res.status(HttpResponseStatusCodesConstants.BAD_REQUEST_FAILURE)
@@ -265,15 +252,15 @@ export class UserController extends UserDao {
 						.json({ warning: "Passwords do not match" });
 					return;
 				}
-
-				user.password = await bcrypt.hash(passwordChangeReq.newPassword || "", 10);
-				user.updatedAt = new Date();
-				await this.userDao.save(user);
-
-				const userResponse: UserResponseModel = await this.userMapper.mapToUserResponse(user);
+				const updatedUser: UserSchema = await this.userService.updateUserPassword(user, passwordChangeReq.newPassword);
+				const userResponse: UserResponseModel = await this.userMapper.mapToUserResponse(updatedUser);
 				this.logger.logInfo("Password Updated Successfully")
 				res.status(HttpResponseStatusCodesConstants.CREATED_SUCCESS)
 					.json({ user: userResponse });
+			} else {
+				this.logger.logError("User repository not autowired properly");
+				res.status(HttpResponseStatusCodesConstants.NOT_FOUND_FAILURE)
+					.json({ message: "User repository not autowired properly" });
 			}
 		} catch (error: any) {
 			this.logger.logError(error.message);
@@ -288,16 +275,14 @@ export class UserController extends UserDao {
 	*/
 	public forgotPassword = async (req: Request, res: Response): Promise<void> => {
 		try {
-			if (this.userDao) {
+			if (this.userService) {
 				const userEmailId: string = req.body.emailId;
-				const user = await this.userDao.findOne({ where: { emailId: userEmailId } });
-
+				const user = await this.userService.findUserByEmailId(userEmailId);
 				if (!user) {
 					res.status(HttpResponseStatusCodesConstants.NOT_FOUND_FAILURE)
 						.json({ error: "Invalid Email Id" });
 					return;
 				}
-
 				const token = await JwtAuthentication.generateResetPasswordToken(user.userId);
 				res.cookie("reset_password_token", token, {
 					httpOnly: true,
@@ -305,9 +290,12 @@ export class UserController extends UserDao {
 					maxAge: 15 * 60 * 1000, // 15 mins
 					sameSite: "strict",
 				});
-
 				res.status(HttpResponseStatusCodesConstants.RETRIEVED_SUCCESS)
 					.json({ reset_password_token: token });
+			} else {
+				this.logger.logError("User repository not autowired properly");
+				res.status(HttpResponseStatusCodesConstants.NOT_FOUND_FAILURE)
+					.json({ message: "User repository not autowired properly" });
 			}
 		} catch (error: any) {
 			this.logger.logError(error.message);
@@ -322,43 +310,40 @@ export class UserController extends UserDao {
 	*/
 	public resetPassword = async (req: Request, res: Response): Promise<void> => {
 		try {
-			if (this.userDao) {
+			if (this.userService) {
 				const user = req.body.resetPasswordUser;
 				if (!user) {
 					res.status(HttpResponseStatusCodesConstants.NOT_FOUND_FAILURE)
 						.json({ error: "Cannot validate the token" });
 					return;
 				}
-
 				const passwordResetReq = req.body as UserResetPasswordModel;
-
 				if (passwordResetReq.newPassword !== passwordResetReq.confirmPassword) {
 					this.logger.logWarn("Please enter the new password twice correctly")
 					res.status(HttpResponseStatusCodesConstants.BAD_REQUEST_FAILURE)
 						.json({ warning: "Passwords do not match" });
 					return;
 				}
-
-				const isPasswordSame = await bcrypt.compare(passwordResetReq.newPassword, user.password);
+				const isPasswordSame = await this.userService.isValidPassword(passwordResetReq.newPassword, user.password);
 				if (isPasswordSame) {
 					this.logger.logWarn("Please enter a new password")
 					res.status(HttpResponseStatusCodesConstants.BAD_REQUEST_FAILURE)
 						.json({ warning: "Please enter a new password" });
 					return;
 				}
-
-				user.password = await bcrypt.hash(passwordResetReq.newPassword || "", 10);
-				user.updatedAt = new Date();
-				await this.userDao.save(user);
+				const updatedUser: UserSchema = await this.userService.updateUserPassword(user, passwordResetReq.newPassword);
 				res.clearCookie("auth_token");
-
-				const userResponse: UserResponseModel = await this.userMapper.mapToUserResponse(user);
+				const userResponse: UserResponseModel = await this.userMapper.mapToUserResponse(updatedUser);
 				this.logger.logInfo("Password Updated Successfully")
 				res.status(HttpResponseStatusCodesConstants.CREATED_SUCCESS)
 					.json({
 						message: "Password reset successfull, Please login again",
 						user: userResponse
 					});
+			} else {
+				this.logger.logError("User repository not autowired properly");
+				res.status(HttpResponseStatusCodesConstants.NOT_FOUND_FAILURE)
+					.json({ message: "User repository not autowired properly" });
 			}
 		} catch (error: any) {
 			this.logger.logError(error.message);

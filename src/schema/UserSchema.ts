@@ -1,10 +1,13 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn } from "typeorm"
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, BeforeInsert } from "typeorm"
 
 @Entity('users')
 export class UserSchema {
 
     @PrimaryGeneratedColumn()
     userId!: number;
+
+    @Column({ type: 'varchar', length: 5, unique: true, nullable: false })
+    userCode!: string;
 
     @Column({ type: 'varchar', length: 100, unique: true })
     username!: string;
@@ -32,4 +35,10 @@ export class UserSchema {
 
     @UpdateDateColumn()
     updatedAt!: Date;
+
+    @BeforeInsert()
+    generateUserCode() {
+        this.userCode = Math.random().toString(36).substring(2, 7).toUpperCase();
+    }
+
 }

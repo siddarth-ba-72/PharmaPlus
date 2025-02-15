@@ -1,15 +1,24 @@
-import { DataSource, Repository } from "typeorm";
 import { UserSchema } from "../schema/UserSchema";
-import DatabaseConnection from "../middlewares/DatabaseConnection";
+import { UserRequestModel } from "../models/UserHttpModels/UserRequestModel";
+import { UserRegisterRequestModel } from "../models/UserHttpModels/UserRegisterRequestModel";
 
-export class UserDao {
+export interface UserDao {
 
-    private dataSource: DataSource;
-    public userDao: Repository<UserSchema>;
+    findAllUsers(): Promise<UserSchema[]>;
 
-    constructor() {
-        this.dataSource = DatabaseConnection.getInstance().getDataSource();
-        this.userDao = this.dataSource.getRepository(UserSchema);
-    }
+    findUserByUserName(userName: string): Promise<UserSchema | null>;
+
+    findUserByEmailId(emailId: string): Promise<UserSchema | null>;
+
+    findLoggedInUser(req: any): Promise<UserSchema>;
+
+    isValidPassword(requestedPassword: string, userPassword: string): Promise<Boolean>;
+
+    addUser(user: UserRegisterRequestModel): Promise<UserSchema>;
+
+    updateUserDetails(user: UserSchema, updatedUserDetails: UserRequestModel): Promise<UserSchema>;
+
+    updateUserPassword(user: UserSchema, newPassword: string): Promise<UserSchema>;
+
 
 }
