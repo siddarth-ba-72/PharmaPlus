@@ -9,6 +9,7 @@ import MedicineRouter from './routes/MedicineRouter';
 import StockRouter from './routes/StockRouter';
 import DatabaseConnection from './middlewares/DatabaseConnection';
 import CartRouter from './routes/CartRouter';
+import OrderRouter from './routes/OrderRouter';
 
 class PharmaPlusApplication {
 
@@ -47,6 +48,7 @@ class PharmaPlusApplication {
         this.app.use("/pp/webapp/api/medicines", MedicineRouter);
         this.app.use("/pp/webapp/api/stocks", StockRouter);
         this.app.use("/pp/webapp/api/carts", CartRouter);
+        this.app.use("/pp/webapp/api/orders", OrderRouter);
     }
 
     private initializeErrorHandling(): void {

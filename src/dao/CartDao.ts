@@ -11,4 +11,6 @@ export interface CartDao {
 
     removeUserCartItem(cartItem: CartSchema): Promise<void>;
 
+    clearUserCartUponOrder(cartItems: CartSchema[]): Promise<void>;
+
 }

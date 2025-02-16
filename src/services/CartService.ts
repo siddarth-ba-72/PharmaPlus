@@ -41,4 +41,8 @@ export class CartService implements CartDao {
         await this.cartRepository.remove(cartItem);
     }
 
+    public async clearUserCartUponOrder(cartItems: CartSchema[]): Promise<void> {
+        cartItems.forEach((item) => this.cartRepository.remove(item));
+    }
+
 }

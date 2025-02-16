@@ -4,6 +4,7 @@ import { MedicineStockSchema } from "../schema/MedicineStockSchema";
 import DatabaseConnection from "../middlewares/DatabaseConnection";
 import { StockRequestModel } from "../models/StockHttpModels/StockRequestModel";
 import { StockMapper } from "../mappers/StockMapper";
+import { OrderMedicineSchema } from "../schema/OrderMedicineSchema";
 
 export class StockService implements StockDao {
 
@@ -44,6 +45,23 @@ export class StockService implements StockDao {
 
     public async deleteMedicineStock(medicineStock: MedicineStockSchema): Promise<void> {
         await this.stockRepository.remove(medicineStock);
+    }
+
+    public async updateMedicineStockUponOrder(orderMedicines: OrderMedicineSchema[]): Promise<void> {
+        await Promise.all(orderMedicines.map(async (orderItem) => {
+            const stock: MedicineStockSchema | null = await this.stockRepository.findOne({
+                where: {
+                    medicine: {
+                        medicineCode: orderItem.medicine.medicineCode
+                    }
+                }
+            });
+            if (stock && stock.quantity !== undefined) {
+                stock.quantity -= orderItem.quantity;
+                await this.stockRepository.save(stock);
+            }
+
+        }));
     }
 
 }
