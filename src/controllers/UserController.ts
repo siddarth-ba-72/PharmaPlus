@@ -11,17 +11,20 @@ import { UserLoginRequestModel } from "../models/UserHttpModels/UserLoginRequest
 import { UserRequestModel } from "../models/UserHttpModels/UserRequestModel";
 import { UserPasswordUpdateRequest } from "../models/UserHttpModels/UserPasswordUpdateRequest";
 import { UserResetPasswordModel } from "../models/UserHttpModels/UserResetPasswordModel";
+import HttpResponseMiddleware from "../middlewares/HttpResponseMiddleware";
 
 export class UserController {
 
 	private userService: UserService;
 	private userMapper: UserMapper;
 	private logger: ApplicationLogger;
+	private httpResponse: HttpResponseMiddleware;
 
 	constructor() {
 		this.userService = new UserService();
 		this.userMapper = new UserMapper();
 		this.logger = new ApplicationLogger();
+		this.httpResponse = new HttpResponseMiddleware();
 	}
 
 	/*
@@ -34,23 +37,19 @@ export class UserController {
 				const users = await this.userService.findAllUsers();
 				if (users.length === 0) {
 					this.logger.logInfo("No users found");
-					res.status(HttpResponseStatusCodesConstants.NO_CONTENT_SUCCESS)
-						.json({ users });
+					await this.httpResponse.getNoContentSuccessResponse(res, { message: "No users found" });
 				} else {
 					this.logger.logInfo(`Found ${users.length} users`);
 					const userResponse: UserResponseModel[] = await this.userMapper.mapToUserResponseArray(users);
-					res.status(HttpResponseStatusCodesConstants.RETRIEVED_SUCCESS)
-						.json({ users: userResponse });
+					await this.httpResponse.getRetrievedSuccessResponse(res, { users: userResponse });
 				}
 			} else {
 				this.logger.logError("User service not autowired properly");
-				res.status(HttpResponseStatusCodesConstants.NOT_FOUND_FAILURE)
-					.json({ message: "User service not autowired properly" });
+				await this.httpResponse.getNotFoundFailureResponse(res, "User service not autowired properly");
 			}
 		} catch (error: any) {
 			this.logger.logError(error.message);
-			res.status(HttpResponseStatusCodesConstants.INTERNAL_SERVER_FAILURE)
-				.json({ message: error.message });
+			await this.httpResponse.getServerErrorFailureResponse(res, error.message);
 		}
 	}
 
@@ -70,18 +69,14 @@ export class UserController {
 					return;
 				}
 				const userResponse = await this.userMapper.mapToUserResponse(user);
-				res.status(HttpResponseStatusCodesConstants.RETRIEVED_SUCCESS)
-					.json({ user: userResponse });
+				await this.httpResponse.getRetrievedSuccessResponse(res, { user: userResponse });
 			} else {
 				this.logger.logError("User service not autowired properly");
-				res.status(HttpResponseStatusCodesConstants.NOT_FOUND_FAILURE)
-					.json({ message: "User service not autowired properly" });
+				await this.httpResponse.getNotFoundFailureResponse(res, "User service not autowired properly");
 			}
 		} catch (error: any) {
 			this.logger.logError(error.message);
-			res.status(HttpResponseStatusCodesConstants.INTERNAL_SERVER_FAILURE)
-				.json({ message: error.message });
-
+			await this.httpResponse.getServerErrorFailureResponse(res, error.message);
 		}
 	}
 
@@ -96,9 +91,7 @@ export class UserController {
 				const existingUser = await this.userService.findUserByUserName(userReq.userName);
 				if (existingUser) {
 					this.logger.logError("Username already exists. Please choose a different username");
-					res.status(HttpResponseStatusCodesConstants.NOT_ALLOWED_FAILURE).json({
-						message: "Username already exists. Please choose a different username.",
-					});
+					await this.httpResponse.getNotAllowedFailureResponse(res, "Username already exists. Please choose a different username.");
 					return;
 				}
 				res.clearCookie("auth_token");
@@ -144,16 +137,14 @@ export class UserController {
 				if (!user) {
 					this.logger.logError("User not found");
 					res.clearCookie("auth_token");
-					res.status(HttpResponseStatusCodesConstants.NOT_FOUND_FAILURE)
-						.json({ message: "Invalid username" });
+					await this.httpResponse.getNotFoundFailureResponse(res, "Invalid Username");
 					return;
 				}
 				const isPasswordValid = await this.userService.isValidPassword(userReq.password, user.password);
 				if (!isPasswordValid) {
 					this.logger.logError("Invalid Password");
 					res.clearCookie("auth_token");
-					res.status(HttpResponseStatusCodesConstants.BAD_REQUEST_FAILURE)
-						.json({ message: "Invalid Password" });
+					await this.httpResponse.getBadRequestFailureResponse(res, "Invalid Password");
 					return;
 				}
 				res.clearCookie("auth_token");
@@ -166,8 +157,7 @@ export class UserController {
 				});
 				const userResponse = await this.userMapper.mapToUserResponse(user);
 				this.logger.logInfo(`User ${user.username} logged in successfully`);
-				res.status(HttpResponseStatusCodesConstants.CREATED_SUCCESS)
-					.json({ user: userResponse });
+				await this.httpResponse.getCreatedSuccessResponse(res, { user: userResponse });
 			} else {
 				this.logger.logError("User service not autowired properly");
 				res.status(HttpResponseStatusCodesConstants.NOT_FOUND_FAILURE)

@@ -34,9 +34,7 @@ class DatabaseConnectionConfig {
     public async initialize(): Promise<void> {
         try {
             await this.dataSource.initialize();
-            console.log("Database connected!");
         } catch (error) {
-            console.log("Error during Data Source initialization: ", error);
             throw new DatabaseInitializationException(500, "Failed to initialize the database connection");
         }
     }

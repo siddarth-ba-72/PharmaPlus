@@ -3,37 +3,39 @@ import { JwtAuthentication } from "../utils/JwtAuthentication";
 import { DataSource, Repository } from "typeorm";
 import { UserSchema } from "../schema/UserSchema";
 import DatabaseConnectionConfig from "../config/DatabaseConnectionConfig";
+import HttpResponseMiddleware from "./HttpResponseMiddleware";
 
 export class AuthenticationMiddleware {
+
     private dataSource: DataSource;
     private userRepository: Repository<UserSchema>;
+    private httpResponse: HttpResponseMiddleware;
 
     constructor() {
         this.dataSource = DatabaseConnectionConfig.getInstance().getDataSource();
         this.userRepository = this.dataSource.getRepository(UserSchema);
+        this.httpResponse = new HttpResponseMiddleware();
     }
 
     public checkIsNotLoggedIn = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
         const authToken = req.cookies.auth_token;
         if (authToken) {
-            res.status(200)
-                .json({ message: "User already logged in" });
+            await this.httpResponse.getRetrievedSuccessResponse(res, { message: "User already logged in" });
             return;
         }
         next();
     }
 
     public authenticate = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-        const authToken = req.cookies.auth_token;
-        if (!authToken) {
-            res.status(403).json({ message: "Unauthorized Access" });
-            return;
-        }
-
         try {
+            const authToken = req.cookies.auth_token;
+            if (!authToken) {
+                await this.httpResponse.getForbiddenFailureResponse(res, "Unauthorized Access");
+                return;
+            }
             const decodedUser: any = JSON.parse(await JwtAuthentication.verify(authToken));
             if (!decodedUser) {
-                res.status(403).json({ message: "Unauthorized Access" });
+                await this.httpResponse.getForbiddenFailureResponse(res, "Unauthorized Access");
                 return;
             }
 
@@ -42,29 +44,29 @@ export class AuthenticationMiddleware {
             });
 
             if (!user) {
-                res.status(404).json({ message: "Invalid Token" });
+                await this.httpResponse.getForbiddenFailureResponse(res, "Unauthorized Access");
                 return;
             }
 
             req.body.user = user;
             next();
         } catch (error: any) {
-            res.status(500).json({ message: error.message });
+            await this.httpResponse.getServerErrorFailureResponse(res, error.message);
             return;
         }
     }
 
     public authenticateAdmin = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-        const authToken = req.cookies.auth_token;
-        if (!authToken) {
-            res.status(403).json({ message: "Unauthorized Access" });
-            return;
-        }
-
         try {
+            const authToken = req.cookies.auth_token;
+            if (!authToken) {
+                await this.httpResponse.getForbiddenFailureResponse(res, "Unauthorized Access");
+                return;
+            }
+
             const decodedUser: any = JSON.parse(await JwtAuthentication.verify(authToken));
             if (!decodedUser) {
-                res.status(403).json({ message: "Unauthorized Access" });
+                await this.httpResponse.getForbiddenFailureResponse(res, "Unauthorized Access");
                 return;
             }
 
@@ -73,19 +75,19 @@ export class AuthenticationMiddleware {
             });
 
             if (!user) {
-                res.status(404).json({ message: "Invalid Token" });
+                await this.httpResponse.getNotFoundFailureResponse(res, "No user found with this token");
                 return;
             }
 
             if (!user.isAdmin) {
-                res.status(403).json({ message: "Admin Access only" });
+                await this.httpResponse.getForbiddenFailureResponse(res, "Access Denied: Admins only");
                 return;
             }
 
             req.body.user = user;
             next();
         } catch (error: any) {
-            res.status(500).json({ message: error.message });
+            await this.httpResponse.getServerErrorFailureResponse(res, error.message);
             return;
         }
     }
@@ -93,14 +95,14 @@ export class AuthenticationMiddleware {
     public checkResetToken = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
         const resetPasswordToken = req.cookies.reset_password_token;
         if (!resetPasswordToken) {
-            res.status(403).json({ message: "Unauthorized Access" });
+            await this.httpResponse.getForbiddenFailureResponse(res, "Unauthorized Access");
             return;
         }
 
         try {
             const decodedUser: any = JSON.parse(await JwtAuthentication.verifyPasswordToken(resetPasswordToken));
             if (!decodedUser) {
-                res.status(403).json({ message: "Unauthorized Access" });
+                await this.httpResponse.getForbiddenFailureResponse(res, "Unauthorized Access");
                 return;
             }
 
@@ -109,14 +111,14 @@ export class AuthenticationMiddleware {
             });
 
             if (!user) {
-                res.status(404).json({ message: "Invalid Token" });
+                await this.httpResponse.getNotFoundFailureResponse(res, "Invalid token");
                 return;
             }
 
             req.body.resetPasswordUser = user;
             next();
         } catch (error: any) {
-            res.status(500).json({ message: error.message });
+            await this.httpResponse.getServerErrorFailureResponse(res, error.message);
             return;
         }
     }
