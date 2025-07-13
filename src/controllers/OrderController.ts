@@ -42,51 +42,91 @@ export class OrderController {
     */
     public orderItems = async (req: Request, res: Response): Promise<void> => {
         try {
-            const user: UserSchema = await this.userService.findLoggedInUser(req);
-            if (!user) {
-                res.status(HttpResponseStatusCodesConstants.NOT_FOUND_FAILURE)
-                    .json({ error: "User not found" });
-                return;
-            }
-            const userCartItems: CartSchema[] = await this.cartService.findUserCartItemsByUserCode(user.userCode) || [];
-            if (userCartItems.length <= 0) {
-                res.status(HttpResponseStatusCodesConstants.NO_CONTENT_SUCCESS)
-                    .json({ message: "User cart is empty" });
-                return;
-            }
-            let totalActualPrice = 0;
-            for (const item of userCartItems) {
-                const itemStock: MedicineStockSchema | null = await this.stockService.findMedicineStockByMedicineCode(item.medicine.medicineCode);
-                if (!itemStock) {
-                    this.logger.logError(`Stock not found for medicine code: ${item.medicine.medicineCode}`)
+            if (req.body.user) {
+                const user: UserSchema = await this.userService.findLoggedInUser(req);
+                if (!user) {
                     res.status(HttpResponseStatusCodesConstants.NOT_FOUND_FAILURE)
-                        .json({ error: `Stock not found for medicine code: ${item.medicine.medicineCode}` });
+                        .json({ error: "User not found" });
                     return;
                 }
-                totalActualPrice += itemStock.price;
-            }
-            const orderReq = req.body as OrderRequestModel;
-            orderReq.paymentPrice = totalActualPrice;
-            const orderMedicineCode = uuidv4().replace(/-/g, "").substring(0, 10).toUpperCase();
+                const userCartItems: CartSchema[] = await this.cartService.findUserCartItemsByUserCode(user.userCode) || [];
+                if (userCartItems.length <= 0) {
+                    res.status(HttpResponseStatusCodesConstants.NO_CONTENT_SUCCESS)
+                        .json({ message: "User cart is empty" });
+                    return;
+                }
+                let totalActualPrice = 0;
+                for (const item of userCartItems) {
+                    const itemStock: MedicineStockSchema | null = await this.stockService.findMedicineStockByMedicineCode(item.medicine.medicineCode);
+                    if (!itemStock) {
+                        this.logger.logError(`Stock not found for medicine code: ${item.medicine.medicineCode}`)
+                        res.status(HttpResponseStatusCodesConstants.NOT_FOUND_FAILURE)
+                            .json({ error: `Stock not found for medicine code: ${item.medicine.medicineCode}` });
+                        return;
+                    }
+                    totalActualPrice += itemStock.price;
+                }
+                const orderReq = req.body as OrderRequestModel;
+                orderReq.paymentPrice = totalActualPrice;
+                const orderMedicineCode = uuidv4().replace(/-/g, "").substring(0, 10).toUpperCase();
 
-            const transactionCode: string = await this.paymentService.makePayment(orderReq, user.userCode);
-            if (!transactionCode) {
-                res.status(HttpResponseStatusCodesConstants.BAD_REQUEST_FAILURE)
-                    .json({ error: "Could not process the payment" });
+                const transactionCode: string = await this.paymentService.makePayment(orderReq, user.userCode);
+                if (!transactionCode) {
+                    res.status(HttpResponseStatusCodesConstants.BAD_REQUEST_FAILURE)
+                        .json({ error: "Could not process the payment" });
+                }
+                const newOrderItems: OrderMedicineSchema[] = await this.orderService.addNewOrderMedicineItems(userCartItems, user.userCode, orderMedicineCode, transactionCode);
+                const newOrder: OrderSchema | null = await this.orderService.findOrderByOrderMedicineCode(orderMedicineCode);
+                if (!newOrder) {
+                    this.logger.logError(`Could not place order`)
+                    res.status(HttpResponseStatusCodesConstants.NOT_FOUND_FAILURE)
+                        .json({ error: `Cannot place order` });
+                    return;
+                }
+                await this.stockService.updateMedicineStockUponOrder(newOrderItems);
+                await this.cartService.clearUserCartUponOrder(userCartItems);
+                const orderResponse: OrderResponseModel = await this.orderMapper.mapToOrderResponseModel(user, orderMedicineCode, transactionCode, newOrderItems);
+                res.status(HttpResponseStatusCodesConstants.CREATED_SUCCESS)
+                    .json(orderResponse);
+            } else {
+                this.logger.logError("User not found");
+                res.status(HttpResponseStatusCodesConstants.UNAUTHORIZED_FAILURE)
+                    .json({ message: "User not found" });
             }
-            const newOrderItems: OrderMedicineSchema[] = await this.orderService.addNewOrderMedicineItems(userCartItems, user.userCode, orderMedicineCode, transactionCode);
-            const newOrder: OrderSchema | null = await this.orderService.findOrderByOrderMedicineCode(orderMedicineCode);
-            if (!newOrder) {
-                this.logger.logError(`Could not place order`)
-                res.status(HttpResponseStatusCodesConstants.NOT_FOUND_FAILURE)
-                    .json({ error: `Cannot place order` });
-                return;
+        } catch (error: any) {
+            this.logger.logError(error.message);
+            res.status(HttpResponseStatusCodesConstants.INTERNAL_SERVER_FAILURE)
+                .json({ message: error.message });
+        }
+    }
+
+    /*
+    * GET/ my-orders/
+    * Authenticated Access
+    */
+    public userOrders = async (req: Request, res: Response): Promise<void> => {
+        try {
+            if (req.body.user) {
+                const user: UserSchema = await this.userService.findLoggedInUser(req);
+                if (!user) {
+                    res.status(HttpResponseStatusCodesConstants.NOT_FOUND_FAILURE)
+                        .json({ error: "User not found" });
+                    return;
+                }
+                const userOrders: OrderSchema[] | null = await this.orderService.findOrdersByUserCode(user?.userCode);
+                if (userOrders == null || userOrders.length === 0) {
+                    this.logger.logError(`No orders for user: ${user?.username}`);
+                    res.status(HttpResponseStatusCodesConstants.NO_CONTENT_SUCCESS)
+                        .json({ message: `No orders for user: ${user?.username}` });
+                    return;
+                }
+                res.status(HttpResponseStatusCodesConstants.RETRIEVED_SUCCESS)
+                    .json(userOrders);
+            } else {
+                this.logger.logError("User not found");
+                res.status(HttpResponseStatusCodesConstants.UNAUTHORIZED_FAILURE)
+                    .json({ message: "User not found" });
             }
-            await this.stockService.updateMedicineStockUponOrder(newOrderItems);
-            await this.cartService.clearUserCartUponOrder(userCartItems);
-            const orderResponse: OrderResponseModel = await this.orderMapper.mapToOrderResponseModel(user, orderMedicineCode, transactionCode, newOrderItems);
-            res.status(HttpResponseStatusCodesConstants.CREATED_SUCCESS)
-                .json(orderResponse);
         } catch (error: any) {
             this.logger.logError(error.message);
             res.status(HttpResponseStatusCodesConstants.INTERNAL_SERVER_FAILURE)

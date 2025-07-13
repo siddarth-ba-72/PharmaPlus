@@ -1,6 +1,6 @@
 import { DataSource, Repository } from "typeorm";
 import { PaymentDao } from "../dao/PaymentDao";
-import DatabaseConnection from "../middlewares/DatabaseConnection";
+import DatabaseConnectionConfig from "../config/DatabaseConnectionConfig";
 import { PaymentSchema } from "../schema/PaymentSchema";
 import { OrderRequestModel } from "../models/OrderHttpModels/OrderRequestModel";
 import { PaymentMapper } from "../mappers/PaymentMapper";
@@ -12,7 +12,7 @@ export class PaymentService implements PaymentDao {
     private paymentMapper: PaymentMapper;
 
     constructor() {
-        this.dataSource = DatabaseConnection.getInstance().getDataSource();
+        this.dataSource = DatabaseConnectionConfig.getInstance().getDataSource();
         this.paymentRepository = this.dataSource.getRepository(PaymentSchema);
         this.paymentMapper = new PaymentMapper();
     }

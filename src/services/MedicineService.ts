@@ -1,7 +1,7 @@
 import { DataSource, Repository } from "typeorm";
 import { MedicineDao } from "../dao/MedicineDao";
 import { MedicineSchema } from "../schema/MedicineSchema";
-import DatabaseConnection from "../middlewares/DatabaseConnection";
+import DatabaseConnectionConfig from "../config/DatabaseConnectionConfig";
 import { MedicineMapper } from "../mappers/MedicineMapper";
 import { MedicineRequestModel } from "../models/MedicineHttpModels/MedicineRequestModel";
 import { MedicineUpdateRequestModel } from "../models/MedicineHttpModels/MedicineUpdateRequestModel";
@@ -13,7 +13,7 @@ export class MedicineService implements MedicineDao {
     private medicineMapper: MedicineMapper;
 
     constructor() {
-        this.dataSource = DatabaseConnection.getInstance().getDataSource();
+        this.dataSource = DatabaseConnectionConfig.getInstance().getDataSource();
         this.medicineRepository = this.dataSource.getRepository(MedicineSchema);
         this.medicineMapper = new MedicineMapper();
     }

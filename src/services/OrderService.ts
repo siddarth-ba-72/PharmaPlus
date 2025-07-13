@@ -2,7 +2,7 @@ import { DataSource, Repository } from "typeorm";
 import { OrderDao } from "../dao/OrderDao";
 import { OrderMedicineSchema } from "../schema/OrderMedicineSchema";
 import { OrderSchema } from "../schema/OrderSchema";
-import DatabaseConnection from "../middlewares/DatabaseConnection";
+import DatabaseConnectionConfig from "../config/DatabaseConnectionConfig";
 import { CartSchema } from "../schema/CartSchema";
 import { OrderMapper } from "../mappers/OrderMapper";
 
@@ -14,7 +14,7 @@ export class OrderService implements OrderDao {
     private orderMapper: OrderMapper;
 
     constructor() {
-        this.dataSource = DatabaseConnection.getInstance().getDataSource();
+        this.dataSource = DatabaseConnectionConfig.getInstance().getDataSource();
         this.orderMedicineRepository = this.dataSource.getRepository(OrderMedicineSchema);
         this.orderRepository = this.dataSource.getRepository(OrderSchema);
         this.orderMapper = new OrderMapper();
@@ -32,6 +32,16 @@ export class OrderService implements OrderDao {
         return await this.orderRepository.findOne({
             where: {
                 orderMedicineCode: orderMedicineCode
+            }
+        });
+    }
+
+    public async findOrdersByUserCode(userCode: string): Promise<OrderSchema[] | null> {
+        return await this.orderRepository.find({
+            where: {
+                user: {
+                    userCode: userCode
+                }
             }
         });
     }

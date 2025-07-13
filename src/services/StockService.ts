@@ -1,7 +1,7 @@
 import { DataSource, Repository } from "typeorm";
 import { StockDao } from "../dao/StockDao";
 import { MedicineStockSchema } from "../schema/MedicineStockSchema";
-import DatabaseConnection from "../middlewares/DatabaseConnection";
+import DatabaseConnectionConfig from "../config/DatabaseConnectionConfig";
 import { StockRequestModel } from "../models/StockHttpModels/StockRequestModel";
 import { StockMapper } from "../mappers/StockMapper";
 import { OrderMedicineSchema } from "../schema/OrderMedicineSchema";
@@ -13,7 +13,7 @@ export class StockService implements StockDao {
     private stockMapper: StockMapper;
 
     constructor() {
-        this.dataSource = DatabaseConnection.getInstance().getDataSource();
+        this.dataSource = DatabaseConnectionConfig.getInstance().getDataSource();
         this.stockRepository = this.dataSource.getRepository(MedicineStockSchema);
         this.stockMapper = new StockMapper();
     }

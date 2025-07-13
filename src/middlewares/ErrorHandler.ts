@@ -1,6 +1,7 @@
 import { UnAuthorizedAccessException } from "../exceptions/UnAuthorizedAccessException";
 import { BadRequestException } from "../exceptions/BadRequestException";
 import { NextFunction, Request, Response } from "express";
+import { DatabaseInitializationException } from "../exceptions/DatabaseInitializationException";
 
 class ErrorHandler {
 
@@ -13,6 +14,9 @@ class ErrorHandler {
                 .json({ error: error.message });
         }
         else if (error instanceof UnAuthorizedAccessException) {
+            return res.status(error.responseStatusCode)
+                .json({ error: error.message });
+        } else if (error instanceof DatabaseInitializationException) {
             return res.status(error.responseStatusCode)
                 .json({ error: error.message });
         }

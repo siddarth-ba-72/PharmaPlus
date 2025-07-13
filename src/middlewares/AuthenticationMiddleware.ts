@@ -2,14 +2,14 @@ import { NextFunction, Request, Response } from "express";
 import { JwtAuthentication } from "../utils/JwtAuthentication";
 import { DataSource, Repository } from "typeorm";
 import { UserSchema } from "../schema/UserSchema";
-import DatabaseConnection from "./DatabaseConnection";
+import DatabaseConnectionConfig from "../config/DatabaseConnectionConfig";
 
 export class AuthenticationMiddleware {
     private dataSource: DataSource;
     private userRepository: Repository<UserSchema>;
 
     constructor() {
-        this.dataSource = DatabaseConnection.getInstance().getDataSource();
+        this.dataSource = DatabaseConnectionConfig.getInstance().getDataSource();
         this.userRepository = this.dataSource.getRepository(UserSchema);
     }
 

@@ -2,7 +2,7 @@ import { DataSource, Repository } from "typeorm";
 import bcrypt from 'bcryptjs';
 import { UserDao } from "../dao/UserDao";
 import { UserSchema } from "../schema/UserSchema";
-import DatabaseConnection from "../middlewares/DatabaseConnection";
+import DatabaseConnectionConfig from "../config/DatabaseConnectionConfig";
 import { UserRequestModel } from "../models/UserHttpModels/UserRequestModel";
 import { UserRegisterRequestModel } from "../models/UserHttpModels/UserRegisterRequestModel";
 import { UserMapper } from "../mappers/UserMapper";
@@ -14,7 +14,7 @@ export class UserService implements UserDao {
     private userMapper: UserMapper;
 
     constructor() {
-        this.dataSource = DatabaseConnection.getInstance().getDataSource();
+        this.dataSource = DatabaseConnectionConfig.getInstance().getDataSource();
         this.userRepository = this.dataSource.getRepository(UserSchema);
         this.userMapper = new UserMapper();
     }

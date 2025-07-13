@@ -3,7 +3,7 @@
 
 .vscode/
 Query.sql
-src/config/
+src/config/config.env
 
 ### Node ###
 # Logs

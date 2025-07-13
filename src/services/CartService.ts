@@ -1,6 +1,6 @@
 import { DataSource, Repository } from "typeorm";
 import { CartDao } from "../dao/CartDao";
-import DatabaseConnection from "../middlewares/DatabaseConnection";
+import DatabaseConnectionConfig from "../config/DatabaseConnectionConfig";
 import { CartSchema } from "../schema/CartSchema";
 import { CartRequestModel } from "../models/CartHttpModels/CartRequestModel";
 import { CartMapper } from "../mappers/CartMapper";
@@ -12,7 +12,7 @@ export class CartService implements CartDao {
     private cartMapper: CartMapper;
 
     constructor() {
-        this.dataSource = DatabaseConnection.getInstance().getDataSource();
+        this.dataSource = DatabaseConnectionConfig.getInstance().getDataSource();
         this.cartRepository = this.dataSource.getRepository(CartSchema);
         this.cartMapper = new CartMapper();
     }

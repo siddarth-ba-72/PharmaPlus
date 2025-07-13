@@ -18,6 +18,7 @@ class OrderRoutes {
 
     private initializeRoutes() {
         this.router.post("/new-order", this.authMiddleware.authenticate, this.orderController.orderItems);
+        this.router.get("/my-orders", this.authMiddleware.authenticate, this.orderController.userOrders);
     }
 
     public getRouter(): Router {

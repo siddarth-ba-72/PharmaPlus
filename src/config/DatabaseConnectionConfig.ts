@@ -2,10 +2,11 @@ import "reflect-metadata";
 import { DataSource } from 'typeorm';
 import { QueryLogger } from '../middlewares/QueryLogger';
 import { PropertyConstants } from '../utils/PropertyConstants';
+import { DatabaseInitializationException } from "../exceptions/DatabaseInitializationException";
 
-class DatabaseConnection {
+class DatabaseConnectionConfig {
 
-    private static instance: DatabaseConnection;
+    private static instance: DatabaseConnectionConfig;
     private dataSource: DataSource;
 
     private constructor() {
@@ -23,11 +24,11 @@ class DatabaseConnection {
         });
     };
 
-    public static getInstance(): DatabaseConnection {
-        if (!DatabaseConnection.instance) {
-            DatabaseConnection.instance = new DatabaseConnection();
+    public static getInstance(): DatabaseConnectionConfig {
+        if (!DatabaseConnectionConfig.instance) {
+            DatabaseConnectionConfig.instance = new DatabaseConnectionConfig();
         }
-        return DatabaseConnection.instance;
+        return DatabaseConnectionConfig.instance;
     }
 
     public async initialize(): Promise<void> {
@@ -36,6 +37,7 @@ class DatabaseConnection {
             console.log("Database connected!");
         } catch (error) {
             console.log("Error during Data Source initialization: ", error);
+            throw new DatabaseInitializationException(500, "Failed to initialize the database connection");
         }
     }
 
@@ -45,6 +47,4 @@ class DatabaseConnection {
 
 }
 
-export default DatabaseConnection;
-
-
+export default DatabaseConnectionConfig;

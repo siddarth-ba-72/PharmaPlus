@@ -3,9 +3,9 @@
   "name": "pharma-plus",
   "version": "1.0.0",
   "description": "",
-  "main": "./src/server.ts",
+  "main": "./src/PharmaPlusApplication.ts",
   "scripts": {
-    "start": "nodemon ./src/server.ts",
+    "start": "nodemon ./src/PharmaPlusApplication.ts",
     "test": "jest"
   },
   "keywords": [],
