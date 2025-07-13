@@ -1,6 +1,6 @@
 import "reflect-metadata";
 import { DataSource } from 'typeorm';
-import { QueryLogger } from '../middlewares/QueryLogger';
+import { QueryLogger } from '../utils/QueryLogger';
 import { PropertyConstants } from '../utils/PropertyConstants';
 import { DatabaseInitializationException } from "../exceptions/DatabaseInitializationException";
 
