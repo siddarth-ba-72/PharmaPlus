@@ -1,88 +1,59 @@
 import { Response } from 'express';
 import { HttpResponseStatusCodesConstants } from '../utils/HttpResponseStatusCodesConstants';
 
-class HttpResponseMiddleware {
+export class HttpResponseMiddleware {
 
-    public async getRetrievedSuccessResponse(response: Response, httpData: any): Promise<Response> {
-        return response.status(HttpResponseStatusCodesConstants.RETRIEVED_SUCCESS)
-            .json({
-                success: true,
-                data: httpData
-            });
+    /**
+     * Returns a standardized HTTP response based on the status code and data provided.
+     * @param response - The Express response object.
+     * @param statusCode - The HTTP status code to return.
+     * @param httpData - The data to include in the response body.
+     */
+
+    public async sendHttpResponse(response: Response, statusCode: number, httpData: any): Promise<void> {
+        switch (statusCode) {
+            case HttpResponseStatusCodesConstants.RETRIEVED_SUCCESS:
+                this.getHttpResponsebody(response, true, statusCode, httpData);
+            case HttpResponseStatusCodesConstants.CREATED_SUCCESS:
+                this.getHttpResponsebody(response, true, statusCode, httpData);
+            case HttpResponseStatusCodesConstants.NO_CONTENT_SUCCESS:
+                this.getHttpResponsebody(response, true, statusCode, httpData);
+            case HttpResponseStatusCodesConstants.BAD_REQUEST_FAILURE:
+                this.getHttpResponsebody(response, false, statusCode, httpData);
+            case HttpResponseStatusCodesConstants.UNAUTHORIZED_FAILURE:
+                this.getHttpResponsebody(response, false, statusCode, httpData);
+            case HttpResponseStatusCodesConstants.FORBIDDEN_FAILURE:
+                this.getHttpResponsebody(response, false, statusCode, httpData);
+            case HttpResponseStatusCodesConstants.NOT_FOUND_FAILURE:
+                this.getHttpResponsebody(response, false, statusCode, httpData);
+            case HttpResponseStatusCodesConstants.NOT_ALLOWED_FAILURE:
+                this.getHttpResponsebody(response, false, statusCode, httpData);
+            case HttpResponseStatusCodesConstants.INTERNAL_SERVER_FAILURE:
+                this.getHttpResponsebody(response, false, statusCode, httpData);
+            case HttpResponseStatusCodesConstants.BAD_GATEWAY_FAILURE:
+                this.getHttpResponsebody(response, false, statusCode, httpData);
+            default:
+                this.getHttpResponsebody(response, true, statusCode, httpData);
+        }
     }
 
-    public async getCreatedSuccessResponse(response: Response, httpData: any): Promise<Response> {
-        return response.status(HttpResponseStatusCodesConstants.CREATED_SUCCESS)
-            .json({
-                success: true,
-                data: httpData
+    private async getHttpResponsebody(
+        response: Response,
+        success: boolean,
+        statusCode: number,
+        msg: any
+    ): Promise<void> {
+        if (success) {
+            response.status(statusCode).json({
+                success,
+                data: msg
             });
-    }
-
-    public async getNoContentSuccessResponse(response: Response, httpData: any): Promise<Response> {
-        return response.status(HttpResponseStatusCodesConstants.NO_CONTENT_SUCCESS)
-            .json({
-                success: true,
-                data: httpData
+        } else {
+            response.status(statusCode).json({
+                success,
+                error: msg
             });
-    }
-
-    public async getBadRequestFailureResponse(response: Response, errorMessage: any): Promise<Response> {
-        return response.status(HttpResponseStatusCodesConstants.BAD_REQUEST_FAILURE)
-            .json({
-                success: false,
-                error: errorMessage
-            });
-    }
-
-    public async getUnauthorizedFailureResponse(response: Response, errorMessage: any): Promise<Response> {
-        return response.status(HttpResponseStatusCodesConstants.UNAUTHORIZED_FAILURE)
-            .json({
-                success: false,
-                error: errorMessage
-            });
-    }
-
-    public async getForbiddenFailureResponse(response: Response, errorMessage: any): Promise<Response> {
-        return response.status(HttpResponseStatusCodesConstants.FORBIDDEN_FAILURE)
-            .json({
-                success: false,
-                error: errorMessage
-            });
-    }
-
-    public async getNotFoundFailureResponse(response: Response, errorMessage: any): Promise<Response> {
-        return response.status(HttpResponseStatusCodesConstants.NOT_FOUND_FAILURE)
-            .json({
-                success: false,
-                error: errorMessage
-            });
-    }
-
-    public async getNotAllowedFailureResponse(response: Response, errorMessage: any): Promise<Response> {
-        return response.status(HttpResponseStatusCodesConstants.NOT_ALLOWED_FAILURE)
-            .json({
-                success: false,
-                error: errorMessage
-            });
-    }
-
-    public async getServerErrorFailureResponse(response: Response, errorMessage: any): Promise<Response> {
-        return response.status(HttpResponseStatusCodesConstants.INTERNAL_SERVER_FAILURE)
-            .json({
-                success: false,
-                error: errorMessage
-            });
-    }
-
-    public async getBadGatewayFailureResponse(response: Response, errorMessage: any): Promise<Response> {
-        return response.status(HttpResponseStatusCodesConstants.BAD_GATEWAY_FAILURE)
-            .json({
-                success: false,
-                error: errorMessage
-            });
+        }
     }
 
 }
-
-export default HttpResponseMiddleware;

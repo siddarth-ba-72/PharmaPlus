@@ -3,7 +3,8 @@ import { JwtAuthentication } from "../utils/JwtAuthentication";
 import { DataSource, Repository } from "typeorm";
 import { UserSchema } from "../schema/UserSchema";
 import DatabaseConnectionConfig from "../config/DatabaseConnectionConfig";
-import HttpResponseMiddleware from "./HttpResponseMiddleware";
+import { HttpResponseMiddleware } from "./HttpResponseMiddleware";
+import { HttpResponseStatusCodesConstants } from "../utils/HttpResponseStatusCodesConstants";
 
 export class AuthenticationMiddleware {
 
@@ -20,8 +21,8 @@ export class AuthenticationMiddleware {
     public checkIsNotLoggedIn = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
         const authToken = req.cookies.auth_token;
         if (authToken) {
-            await this.httpResponse.getRetrievedSuccessResponse(res, { message: "User already logged in" });
-            return;
+            await this.httpResponse.sendHttpResponse(
+                res, HttpResponseStatusCodesConstants.RETRIEVED_SUCCESS, { message: "User already logged in" });
         }
         next();
     }
@@ -30,12 +31,16 @@ export class AuthenticationMiddleware {
         try {
             const authToken = req.cookies.auth_token;
             if (!authToken) {
-                await this.httpResponse.getForbiddenFailureResponse(res, "Unauthorized Access");
+                await this.httpResponse.sendHttpResponse(
+                    res, HttpResponseStatusCodesConstants.FORBIDDEN_FAILURE, "Unauthorized Access"
+                );
                 return;
             }
             const decodedUser: any = JSON.parse(await JwtAuthentication.verify(authToken));
             if (!decodedUser) {
-                await this.httpResponse.getForbiddenFailureResponse(res, "Unauthorized Access");
+                await this.httpResponse.sendHttpResponse(
+                    res, HttpResponseStatusCodesConstants.FORBIDDEN_FAILURE, "Unauthorized Access"
+                );
                 return;
             }
 
@@ -44,14 +49,18 @@ export class AuthenticationMiddleware {
             });
 
             if (!user) {
-                await this.httpResponse.getForbiddenFailureResponse(res, "Unauthorized Access");
+                await this.httpResponse.sendHttpResponse(
+                    res, HttpResponseStatusCodesConstants.FORBIDDEN_FAILURE, "Unauthorized Access"
+                );
                 return;
             }
 
             req.body.user = user;
             next();
         } catch (error: any) {
-            await this.httpResponse.getServerErrorFailureResponse(res, error.message);
+            await this.httpResponse.sendHttpResponse(
+                res, HttpResponseStatusCodesConstants.INTERNAL_SERVER_FAILURE, error.message
+            );
             return;
         }
     }
@@ -60,13 +69,17 @@ export class AuthenticationMiddleware {
         try {
             const authToken = req.cookies.auth_token;
             if (!authToken) {
-                await this.httpResponse.getForbiddenFailureResponse(res, "Unauthorized Access");
+                await this.httpResponse.sendHttpResponse(
+                    res, HttpResponseStatusCodesConstants.FORBIDDEN_FAILURE, "Unauthorized Access"
+                );
                 return;
             }
 
             const decodedUser: any = JSON.parse(await JwtAuthentication.verify(authToken));
             if (!decodedUser) {
-                await this.httpResponse.getForbiddenFailureResponse(res, "Unauthorized Access");
+                await this.httpResponse.sendHttpResponse(
+                    res, HttpResponseStatusCodesConstants.FORBIDDEN_FAILURE, "Unauthorized Access"
+                );
                 return;
             }
 
@@ -75,19 +88,25 @@ export class AuthenticationMiddleware {
             });
 
             if (!user) {
-                await this.httpResponse.getNotFoundFailureResponse(res, "No user found with this token");
+                await this.httpResponse.sendHttpResponse(
+                    res, HttpResponseStatusCodesConstants.FORBIDDEN_FAILURE, "Unauthorized Access"
+                );
                 return;
             }
 
             if (!user.isAdmin) {
-                await this.httpResponse.getForbiddenFailureResponse(res, "Access Denied: Admins only");
+                await this.httpResponse.sendHttpResponse(
+                    res, HttpResponseStatusCodesConstants.FORBIDDEN_FAILURE, "Unauthorized Access"
+                );
                 return;
             }
 
             req.body.user = user;
             next();
         } catch (error: any) {
-            await this.httpResponse.getServerErrorFailureResponse(res, error.message);
+            await this.httpResponse.sendHttpResponse(
+                res, HttpResponseStatusCodesConstants.INTERNAL_SERVER_FAILURE, error.message
+            );
             return;
         }
     }
@@ -95,14 +114,18 @@ export class AuthenticationMiddleware {
     public checkResetToken = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
         const resetPasswordToken = req.cookies.reset_password_token;
         if (!resetPasswordToken) {
-            await this.httpResponse.getForbiddenFailureResponse(res, "Unauthorized Access");
+            await this.httpResponse.sendHttpResponse(
+                res, HttpResponseStatusCodesConstants.FORBIDDEN_FAILURE, "Unauthorized Access"
+            );
             return;
         }
 
         try {
             const decodedUser: any = JSON.parse(await JwtAuthentication.verifyPasswordToken(resetPasswordToken));
             if (!decodedUser) {
-                await this.httpResponse.getForbiddenFailureResponse(res, "Unauthorized Access");
+                await this.httpResponse.sendHttpResponse(
+                    res, HttpResponseStatusCodesConstants.FORBIDDEN_FAILURE, "Unauthorized Access"
+                );
                 return;
             }
 
@@ -111,14 +134,18 @@ export class AuthenticationMiddleware {
             });
 
             if (!user) {
-                await this.httpResponse.getNotFoundFailureResponse(res, "Invalid token");
+                await this.httpResponse.sendHttpResponse(
+                    res, HttpResponseStatusCodesConstants.NOT_FOUND_FAILURE, "Invalid token"
+                );
                 return;
             }
 
             req.body.resetPasswordUser = user;
             next();
         } catch (error: any) {
-            await this.httpResponse.getServerErrorFailureResponse(res, error.message);
+            await this.httpResponse.sendHttpResponse(
+                res, HttpResponseStatusCodesConstants.INTERNAL_SERVER_FAILURE, error.message
+            );
             return;
         }
     }

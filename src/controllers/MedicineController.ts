@@ -7,6 +7,7 @@ import { MedicineResponseModel } from "../models/MedicineHttpModels/MedicineResp
 import { MedicineUpdateRequestModel } from "../models/MedicineHttpModels/MedicineUpdateRequestModel";
 import { MedicineService } from "../services/MedicineService";
 import { StockService } from "../services/StockService";
+import { HttpResponseMiddleware } from "../middlewares/HttpResponseMiddleware";
 
 export class MedicineController {
 
@@ -14,12 +15,14 @@ export class MedicineController {
     private stockService: StockService;
     private medicineMapper: MedicineMapper;
     private logger: ApplicationLogger;
+    private httpResponse: HttpResponseMiddleware;
 
     constructor() {
         this.medicineService = new MedicineService();
         this.stockService = new StockService();
         this.medicineMapper = new MedicineMapper();
         this.logger = new ApplicationLogger();
+        this.httpResponse = new HttpResponseMiddleware();
     }
 
     /*
@@ -28,27 +31,28 @@ export class MedicineController {
     */
     public getAllMedicines = async (req: Request, res: Response): Promise<void> => {
         try {
-            if (this.medicineService) {
-                const medicines = await this.medicineService.findAllMedicines();
-                if (medicines.length === 0) {
-                    this.logger.logInfo("No medicines found");
-                    res.status(HttpResponseStatusCodesConstants.NO_CONTENT_SUCCESS)
-                        .json({ medicines });
-                } else {
-                    this.logger.logInfo(`Found ${medicines.length} medicines`);
-                    const medicinesResponse = await this.medicineMapper.mapToMedicineResponseArray(medicines);
-                    res.status(HttpResponseStatusCodesConstants.RETRIEVED_SUCCESS)
-                        .json({ medicines: medicinesResponse });
-                }
+            const medicines = await this.medicineService.findAllMedicines();
+            if (medicines.length === 0) {
+                this.logger.logInfo("No medicines found");
+                return this.httpResponse.sendHttpResponse(
+                    res, HttpResponseStatusCodesConstants.NO_CONTENT_SUCCESS, {
+                    message: "No medicines found",
+                    medicines: null
+                });
             } else {
-                this.logger.logError("Medicine service not autowired properly");
-                res.status(HttpResponseStatusCodesConstants.NOT_FOUND_FAILURE)
-                    .json({ message: "Medicine service not autowired properly" });
+                this.logger.logInfo(`Found ${medicines.length} medicines`);
+                const medicinesResponse = await this.medicineMapper.mapToMedicineResponseArray(medicines);
+                return this.httpResponse.sendHttpResponse(
+                    res, HttpResponseStatusCodesConstants.RETRIEVED_SUCCESS, {
+                    medicines: medicinesResponse
+                });
             }
         } catch (error: any) {
             this.logger.logError(error.message);
-            res.status(HttpResponseStatusCodesConstants.INTERNAL_SERVER_FAILURE)
-                .json({ message: error.message });
+            return this.httpResponse.sendHttpResponse(
+                res, HttpResponseStatusCodesConstants.INTERNAL_SERVER_FAILURE, {
+                message: "Something went wrong!",
+            });
         }
     }
 
@@ -58,30 +62,26 @@ export class MedicineController {
     */
     public addMedicine = async (req: Request, res: Response): Promise<void> => {
         try {
-            if (this.medicineService) {
-                const medicineRequest: MedicineRequestModel = req.body as MedicineRequestModel;
-                const existingMedicine = await this.medicineService.findMedicineByMedicineName(medicineRequest.medicineName);
-                if (existingMedicine) {
-                    this.logger.logError("Medicine already exists");
-                    res.status(HttpResponseStatusCodesConstants.NOT_ALLOWED_FAILURE).json({
-                        message: "Medicine already exists",
-                    });
-                    return;
-                }
-                const savedMedicine = await this.medicineService.addMedicine(medicineRequest);
-                const medicineResponse: MedicineResponseModel = await this.medicineMapper.mapToMedicineResponse(savedMedicine);
-                this.logger.logInfo(`Medicine ${savedMedicine.medicineName} saved successfully`);
-                res.status(HttpResponseStatusCodesConstants.CREATED_SUCCESS)
-                    .json({ medicine: medicineResponse });
-            } else {
-                this.logger.logError("Medicine service not autowired properly");
-                res.status(HttpResponseStatusCodesConstants.NOT_FOUND_FAILURE)
-                    .json({ message: "Medicine service not autowired properly" });
+            const medicineRequest: MedicineRequestModel = req.body as MedicineRequestModel;
+            const existingMedicine = await this.medicineService.findMedicineByMedicineName(medicineRequest.medicineName);
+            if (existingMedicine) {
+                this.logger.logError("Medicine already exists");
+                return this.httpResponse.sendHttpResponse(
+                    res, HttpResponseStatusCodesConstants.NOT_ALLOWED_FAILURE, {
+                    message: "Medicine already exists",
+                });
             }
+            const savedMedicine = await this.medicineService.addMedicine(medicineRequest);
+            const medicineResponse: MedicineResponseModel = await this.medicineMapper.mapToMedicineResponse(savedMedicine);
+            this.logger.logInfo(`Medicine ${savedMedicine.medicineName} saved successfully`);
+            return this.httpResponse.sendHttpResponse(
+                res, HttpResponseStatusCodesConstants.CREATED_SUCCESS, { medicine: medicineResponse });
         } catch (error: any) {
             this.logger.logError(error.message);
-            res.status(HttpResponseStatusCodesConstants.INTERNAL_SERVER_FAILURE)
-                .json({ message: error.message });
+            return this.httpResponse.sendHttpResponse(
+                res, HttpResponseStatusCodesConstants.INTERNAL_SERVER_FAILURE, {
+                message: "Something went wrong!",
+            });
         }
     }
 
@@ -91,29 +91,24 @@ export class MedicineController {
     */
     public updateMedicine = async (req: Request, res: Response): Promise<void> => {
         try {
-            if (this.medicineService) {
-                const medicineCode = req.query.medicineCode as string;
-                const medicine = await this.medicineService.findMedicineByMedicineCode(medicineCode);
-                if (!medicine) {
-                    this.logger.logError("Medicine not found");
-                    res.status(HttpResponseStatusCodesConstants.NOT_FOUND_FAILURE)
-                        .json({ message: "Medicine not found" });
-                    return;
-                }
-                const medicineUpdateReq: MedicineUpdateRequestModel = req.body as MedicineUpdateRequestModel;
-                await this.medicineService.updateMedicineDetails(medicine, medicineUpdateReq);
-                const medicineResponse: MedicineResponseModel = await this.medicineMapper.mapToMedicineResponse(medicine);
-                res.status(HttpResponseStatusCodesConstants.CREATED_SUCCESS)
-                    .json({ medicine: medicineResponse });
-            } else {
-                this.logger.logError("Medicine service not autowired properly");
-                res.status(HttpResponseStatusCodesConstants.NOT_FOUND_FAILURE)
-                    .json({ message: "Medicine service not autowired properly" });
+            const medicineCode = req.query.medicineCode as string;
+            const medicine = await this.medicineService.findMedicineByMedicineCode(medicineCode);
+            if (!medicine) {
+                this.logger.logError("Medicine not found");
+                return this.httpResponse.sendHttpResponse(
+                    res, HttpResponseStatusCodesConstants.NOT_FOUND_FAILURE, { message: "Medicine not found" });
             }
+            const medicineUpdateReq: MedicineUpdateRequestModel = req.body as MedicineUpdateRequestModel;
+            await this.medicineService.updateMedicineDetails(medicine, medicineUpdateReq);
+            const medicineResponse: MedicineResponseModel = await this.medicineMapper.mapToMedicineResponse(medicine);
+            return this.httpResponse.sendHttpResponse(
+                res, HttpResponseStatusCodesConstants.CREATED_SUCCESS, { medicine: medicineResponse });
         } catch (error: any) {
             this.logger.logError(error.message);
-            res.status(HttpResponseStatusCodesConstants.INTERNAL_SERVER_FAILURE)
-                .json({ message: error.message });
+            return this.httpResponse.sendHttpResponse(
+                res, HttpResponseStatusCodesConstants.INTERNAL_SERVER_FAILURE, {
+                message: "Something went wrong!",
+            });
         }
     }
 
@@ -123,33 +118,28 @@ export class MedicineController {
     */
     public deleteMedicine = async (req: Request, res: Response): Promise<void> => {
         try {
-            if (this.medicineService && this.stockService) {
-                const medicineCode = req.query.medicineCode as string;
-                const medicine = await this.medicineService.findMedicineByMedicineCode(medicineCode);
-                if (!medicine) {
-                    this.logger.logError("Medicine not found");
-                    res.status(HttpResponseStatusCodesConstants.NOT_FOUND_FAILURE)
-                        .json({ message: "Medicine not found" });
-                    return;
-                }
-                const medicineStock = await this.stockService.findMedicineStockByMedicineCode(medicineCode);
-                if (medicineStock) {
-                    await this.stockService.deleteMedicineStock(medicineStock);
-                    this.logger.logDebug(`Medicine stock for ${medicine.medicineName} deleted succesfully`);
-                }
-                await this.medicineService.deleteMedicineRecord(medicine);
-                this.logger.logDebug(`Medicine ${medicine.medicineName} deleted successfully`);
-                res.status(HttpResponseStatusCodesConstants.RETRIEVED_SUCCESS)
-                    .json({ message: `Medicine record for ${medicine.medicineName} deleted successfully!` });
-            } else {
-                this.logger.logError("Medicine service not autowired properly");
-                res.status(HttpResponseStatusCodesConstants.NOT_FOUND_FAILURE)
-                    .json({ message: "Medicine service not autowired properly" });
+            const medicineCode = req.query.medicineCode as string;
+            const medicine = await this.medicineService.findMedicineByMedicineCode(medicineCode);
+            if (!medicine) {
+                this.logger.logError("Medicine not found");
+                return this.httpResponse.sendHttpResponse(
+                    res, HttpResponseStatusCodesConstants.NOT_FOUND_FAILURE, { message: "Medicine not found" });
             }
+            const medicineStock = await this.stockService.findMedicineStockByMedicineCode(medicineCode);
+            if (medicineStock) {
+                await this.stockService.deleteMedicineStock(medicineStock);
+                this.logger.logDebug(`Medicine stock for ${medicine.medicineName} deleted succesfully`);
+            }
+            await this.medicineService.deleteMedicineRecord(medicine);
+            this.logger.logDebug(`Medicine ${medicine.medicineName} deleted successfully`);
+            return this.httpResponse.sendHttpResponse(
+                res, HttpResponseStatusCodesConstants.RETRIEVED_SUCCESS, { message: `Medicine record for ${medicine.medicineName} deleted successfully!` });
         } catch (error: any) {
             this.logger.logError(error.message);
-            res.status(HttpResponseStatusCodesConstants.INTERNAL_SERVER_FAILURE)
-                .json({ message: error.message });
+            return this.httpResponse.sendHttpResponse(
+                res, HttpResponseStatusCodesConstants.INTERNAL_SERVER_FAILURE, {
+                message: "Something went wrong!",
+            });
         }
     }
 

@@ -55,6 +55,7 @@ class PharmaPlusApplication {
     }
 
     private startServer(): void {
+        this.appMiddlewareConfig.printBanner();
         this.app.listen(this.webPort, () => {
             console.log(`Server is running on http://${this.webHost}:${this.webPort}`);
         });
