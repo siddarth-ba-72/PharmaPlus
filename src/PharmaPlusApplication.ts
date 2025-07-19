@@ -1,8 +1,8 @@
 import express from 'express';
 import { PropertyConstants } from './utils/PropertyConstants';
-import DatabaseConnectionConfig from './config/DatabaseConnectionConfig';
-import RouterConfig from './config/RouterConfig';
-import ApplicationMiddlewareConfig from './config/ApplicationMiddlewareConfig';
+import { DatabaseConnectionConfig } from './config/DatabaseConnectionConfig';
+import { RouterConfig } from './config/RouterConfig';
+import { ApplicationMiddlewareConfig } from './config/ApplicationMiddlewareConfig';
 
 class PharmaPlusApplication {
 

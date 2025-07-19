@@ -2,7 +2,7 @@ import { DataSource, Repository } from "typeorm";
 import { OrderDao } from "../dao/OrderDao";
 import { OrderMedicineSchema } from "../schema/OrderMedicineSchema";
 import { OrderSchema } from "../schema/OrderSchema";
-import DatabaseConnectionConfig from "../config/DatabaseConnectionConfig";
+import { DatabaseConnectionConfig } from "../config/DatabaseConnectionConfig";
 import { CartSchema } from "../schema/CartSchema";
 import { OrderMapper } from "../mappers/OrderMapper";
 

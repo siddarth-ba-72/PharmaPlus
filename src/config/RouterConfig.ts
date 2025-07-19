@@ -5,7 +5,7 @@ import StockRouter from "../routes/StockRouter";
 import CartRouter from "../routes/CartRouter";
 import OrderRouter from "../routes/OrderRouter";
 
-class RouterConfig {
+export class RouterConfig {
 
     public async initializeRoutes(app: express.Application): Promise<void> {
         app.use("/pp/webapp/api/users", UserRouter);
@@ -15,6 +15,4 @@ class RouterConfig {
         app.use("/pp/webapp/api/orders", OrderRouter);
     }
 
-}
-
-export default RouterConfig;
+};

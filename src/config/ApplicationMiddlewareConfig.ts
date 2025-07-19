@@ -5,7 +5,7 @@ import ApiLogger from '../middlewares/ApiLogger';
 import ErrorHandler from '../middlewares/ErrorHandler';
 import { ApplicationLogger } from '../utils/ApplicationLogger';
 
-class ApplicationMiddlewareConfig {
+export class ApplicationMiddlewareConfig {
 
     private apiLogger: ApiLogger;
     private errorHandler: ErrorHandler;
@@ -36,5 +36,3 @@ class ApplicationMiddlewareConfig {
     }
 
 }
-
-export default ApplicationMiddlewareConfig;

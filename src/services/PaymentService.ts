@@ -1,6 +1,6 @@
 import { DataSource, Repository } from "typeorm";
 import { PaymentDao } from "../dao/PaymentDao";
-import DatabaseConnectionConfig from "../config/DatabaseConnectionConfig";
+import { DatabaseConnectionConfig } from "../config/DatabaseConnectionConfig";
 import { PaymentSchema } from "../schema/PaymentSchema";
 import { OrderRequestModel } from "../models/OrderHttpModels/OrderRequestModel";
 import { PaymentMapper } from "../mappers/PaymentMapper";

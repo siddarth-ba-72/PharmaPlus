@@ -2,7 +2,7 @@ import { NextFunction, Request, Response } from "express";
 import { JwtAuthentication } from "../utils/JwtAuthentication";
 import { DataSource, Repository } from "typeorm";
 import { UserSchema } from "../schema/UserSchema";
-import DatabaseConnectionConfig from "../config/DatabaseConnectionConfig";
+import { DatabaseConnectionConfig } from "../config/DatabaseConnectionConfig";
 import { HttpResponseMiddleware } from "./HttpResponseMiddleware";
 import { HttpResponseStatusCodesConstants } from "../utils/HttpResponseStatusCodesConstants";
 

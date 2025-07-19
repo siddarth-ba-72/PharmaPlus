@@ -1,6 +1,6 @@
 import { DataSource, Repository } from "typeorm";
 import { CartDao } from "../dao/CartDao";
-import DatabaseConnectionConfig from "../config/DatabaseConnectionConfig";
+import { DatabaseConnectionConfig } from "../config/DatabaseConnectionConfig";
 import { CartSchema } from "../schema/CartSchema";
 import { CartRequestModel } from "../models/CartHttpModels/CartRequestModel";
 import { CartMapper } from "../mappers/CartMapper";

@@ -4,7 +4,7 @@ import { QueryLogger } from '../utils/QueryLogger';
 import { PropertyConstants } from '../utils/PropertyConstants';
 import { DatabaseInitializationException } from "../exceptions/DatabaseInitializationException";
 
-class DatabaseConnectionConfig {
+export class DatabaseConnectionConfig {
 
     private static instance: DatabaseConnectionConfig;
     private dataSource: DataSource;
@@ -43,6 +43,4 @@ class DatabaseConnectionConfig {
         return this.dataSource;
     }
 
-}
-
-export default DatabaseConnectionConfig;
+};

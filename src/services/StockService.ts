@@ -1,7 +1,7 @@
 import { DataSource, Repository } from "typeorm";
 import { StockDao } from "../dao/StockDao";
 import { MedicineStockSchema } from "../schema/MedicineStockSchema";
-import DatabaseConnectionConfig from "../config/DatabaseConnectionConfig";
+import { DatabaseConnectionConfig } from "../config/DatabaseConnectionConfig";
 import { StockRequestModel } from "../models/StockHttpModels/StockRequestModel";
 import { StockMapper } from "../mappers/StockMapper";
 import { OrderMedicineSchema } from "../schema/OrderMedicineSchema";
