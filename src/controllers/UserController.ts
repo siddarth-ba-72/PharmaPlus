@@ -360,7 +360,7 @@ export class UserController {
 			this.logger.logInfo("Password Updated Successfully")
 			return this.httpResponse.sendHttpResponse(
 				res, HttpResponseStatusCodesConstants.CREATED_SUCCESS, {
-				message: `Password reset successfully for user ${user.userName}, Please login again`,
+				message: `Password reset successfully for user ${updatedUser.username}, Please login again`,
 				user: userResponse
 			});
 		} catch (error: any) {

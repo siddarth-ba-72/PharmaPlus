@@ -24,6 +24,7 @@ export class OrderService implements OrderDao {
         const newOrder = await this.orderMapper.toOrderEntity(orderMedicineCode, userCode, transactionCode);
         await this.orderRepository.save(newOrder);
         const orderMedicines: OrderMedicineSchema[] = await this.orderMapper.toOrderMedicinesEntityArray(userCartItem, orderMedicineCode);
+        console.log(orderMedicines);
         orderMedicines.forEach((orderItem) => this.orderMedicineRepository.save(orderItem));
         return orderMedicines;
     }
@@ -41,6 +42,16 @@ export class OrderService implements OrderDao {
             where: {
                 user: {
                     userCode: userCode
+                }
+            }
+        });
+    }
+
+    public async findOrderMedicineByOrder(orderMedicineCode: string): Promise<OrderMedicineSchema[] | null> {
+        return await this.orderMedicineRepository.find({
+            where: {
+                order: {
+                    orderMedicineCode: orderMedicineCode
                 }
             }
         });

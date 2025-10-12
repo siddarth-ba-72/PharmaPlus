@@ -3,11 +3,13 @@ import { DataSource } from 'typeorm';
 import { QueryLogger } from '../utils/QueryLogger';
 import { PropertyConstants } from '../utils/PropertyConstants';
 import { DatabaseInitializationException } from "../exceptions/DatabaseInitializationException";
+import { ApplicationLogger } from "../utils/ApplicationLogger";
 
 export class DatabaseConnectionConfig {
 
     private static instance: DatabaseConnectionConfig;
     private dataSource: DataSource;
+    private logger: ApplicationLogger;
 
     private constructor() {
         this.dataSource = new DataSource({
@@ -22,6 +24,7 @@ export class DatabaseConnectionConfig {
             logger: new QueryLogger(),
             entities: ["src/schema/*.ts"]
         });
+        this.logger = new ApplicationLogger();
     };
 
     public static getInstance(): DatabaseConnectionConfig {
@@ -34,7 +37,8 @@ export class DatabaseConnectionConfig {
     public async initialize(): Promise<void> {
         try {
             await this.dataSource.initialize();
-        } catch (error) {
+        } catch (error: any) {
+            this.logger.logError(error);
             throw new DatabaseInitializationException(500, "Failed to initialize the database connection");
         }
     }

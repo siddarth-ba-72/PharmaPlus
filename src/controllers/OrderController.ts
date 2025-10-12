@@ -16,6 +16,7 @@ import { OrderSchema } from "../schema/OrderSchema";
 import { OrderMapper } from "../mappers/OrderMapper";
 import { OrderResponseModel } from "../models/OrderHttpModels/OrderResponseModel";
 import { HttpResponseMiddleware } from "../middlewares/HttpResponseMiddleware";
+import { UserOrderResponseModel } from "../models/OrderHttpModels/UserOrderResponseModel";
 
 export class OrderController {
 
@@ -130,7 +131,9 @@ export class OrderController {
                         message: "User not found"
                     });
                 }
+
                 const userOrders: OrderSchema[] | null = await this.orderService.findOrdersByUserCode(user?.userCode);
+
                 if (userOrders == null || userOrders.length === 0) {
                     this.logger.logError(`No orders for user: ${user?.username}`);
                     return this.httpResponse.sendHttpResponse(
@@ -139,10 +142,17 @@ export class OrderController {
                         orders: null
                     });
                 }
+
+                const userOrderResponse: UserOrderResponseModel[] = await Promise.all(
+                    userOrders?.map(async (userOrder): Promise<UserOrderResponseModel> => {
+                        const orderMedicines: OrderMedicineSchema[] | null = await this.orderService.findOrderMedicineByOrder(userOrder?.orderMedicineCode);
+                        return this.orderMapper.mapToUserOrderResponseModel(userOrder, orderMedicines);
+                    }) ?? []
+                );
                 return this.httpResponse.sendHttpResponse(
                     res, HttpResponseStatusCodesConstants.RETRIEVED_SUCCESS, {
-                    message: `Found ${userOrders.length} orders for user: ${user?.username}`,
-                    orders: userOrders
+                    message: `Found ${userOrderResponse.length} orders for user: ${user?.username}`,
+                    orders: userOrderResponse
                 });
             } else {
                 this.logger.logError("User not found");

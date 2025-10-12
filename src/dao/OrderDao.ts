@@ -10,4 +10,6 @@ export interface OrderDao {
 
     findOrdersByUserCode(userCode: string): Promise<OrderSchema[] | null>;
 
+    findOrderMedicineByOrder(orderMedicineCode: string): Promise<OrderMedicineSchema[] | null>;
+
 }

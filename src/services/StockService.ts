@@ -29,7 +29,7 @@ export class StockService implements StockDao {
                     medicineCode: medicineCode
                 }
             }
-        })
+        });
     }
 
     public async saveMedicineStock(stockReq: StockRequestModel): Promise<MedicineStockSchema> {

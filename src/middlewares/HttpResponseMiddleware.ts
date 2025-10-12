@@ -13,27 +13,22 @@ export class HttpResponseMiddleware {
     public async sendHttpResponse(response: Response, statusCode: number, httpData: any): Promise<void> {
         switch (statusCode) {
             case HttpResponseStatusCodesConstants.RETRIEVED_SUCCESS:
-                this.getHttpResponsebody(response, true, statusCode, httpData);
             case HttpResponseStatusCodesConstants.CREATED_SUCCESS:
-                this.getHttpResponsebody(response, true, statusCode, httpData);
             case HttpResponseStatusCodesConstants.NO_CONTENT_SUCCESS:
                 this.getHttpResponsebody(response, true, statusCode, httpData);
+                break;
             case HttpResponseStatusCodesConstants.BAD_REQUEST_FAILURE:
-                this.getHttpResponsebody(response, false, statusCode, httpData);
             case HttpResponseStatusCodesConstants.UNAUTHORIZED_FAILURE:
-                this.getHttpResponsebody(response, false, statusCode, httpData);
             case HttpResponseStatusCodesConstants.FORBIDDEN_FAILURE:
-                this.getHttpResponsebody(response, false, statusCode, httpData);
             case HttpResponseStatusCodesConstants.NOT_FOUND_FAILURE:
-                this.getHttpResponsebody(response, false, statusCode, httpData);
             case HttpResponseStatusCodesConstants.NOT_ALLOWED_FAILURE:
-                this.getHttpResponsebody(response, false, statusCode, httpData);
             case HttpResponseStatusCodesConstants.INTERNAL_SERVER_FAILURE:
-                this.getHttpResponsebody(response, false, statusCode, httpData);
             case HttpResponseStatusCodesConstants.BAD_GATEWAY_FAILURE:
                 this.getHttpResponsebody(response, false, statusCode, httpData);
+                break;
             default:
                 this.getHttpResponsebody(response, true, statusCode, httpData);
+                break;
         }
     }
 
