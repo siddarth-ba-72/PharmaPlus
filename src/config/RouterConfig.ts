@@ -1,4 +1,5 @@
 import express from "express";
+import path from "path";
 import UserRouter from "../routes/UserRouter";
 import MedicineRouter from "../routes/MedicineRouter";
 import StockRouter from "../routes/StockRouter";
@@ -13,6 +14,10 @@ export class RouterConfig {
         app.use("/pp/webapp/api/stocks", StockRouter);
         app.use("/pp/webapp/api/carts", CartRouter);
         app.use("/pp/webapp/api/orders", OrderRouter);
+
+        app.get("/client/ng/*", (req, res) => {
+            res.sendFile(path.join(__dirname, "../../client/pharma-plus/dist/pharma-plus/browser/index.html"));
+        });
     }
 
 };
