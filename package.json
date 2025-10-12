@@ -3,10 +3,10 @@
   "name": "pharma-plus",
   "version": "1.0.0",
   "description": "",
-  "main": "./src/PharmaPlusApplication.ts",
+  "main": "./backend/PharmaPlusApplication.ts",
   "scripts": {
     "start": "concurrently \"npm run server\" \"npm run client\"",
-    "server": "nodemon ./src/PharmaPlusApplication.ts",
+    "server": "nodemon ./backend/PharmaPlusApplication.ts",
     "client": "npm start --prefix client/pharma-plus",
     "test": "jest"
   },
