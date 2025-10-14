@@ -16,7 +16,7 @@ export class RouterConfig {
         app.use("/pp/webapp/api/orders", OrderRouter);
 
         app.get("/client/ng/*", (req, res) => {
-            res.sendFile(path.join(__dirname, "../../client/pharma-plus/dist/pharma-plus/browser/index.html"));
+            res.sendFile(path.join(__dirname, "../../client/dist/pharma-plus/browser/index.html"));
         });
     }
 
