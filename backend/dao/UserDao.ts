@@ -10,15 +10,10 @@ export interface UserDao {
 
     findUserByEmailId(emailId: string): Promise<UserSchema | null>;
 
-    findLoggedInUser(req: any): Promise<UserSchema>;
-
-    isValidPassword(requestedPassword: string, userPassword: string): Promise<Boolean>;
-
     addUser(user: UserRegisterRequestModel): Promise<UserSchema>;
 
     updateUserDetails(user: UserSchema, updatedUserDetails: UserRequestModel): Promise<UserSchema>;
 
     updateUserPassword(user: UserSchema, newPassword: string): Promise<UserSchema>;
-
 
 }

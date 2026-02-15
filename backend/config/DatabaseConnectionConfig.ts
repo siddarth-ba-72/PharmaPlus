@@ -2,7 +2,7 @@ import "reflect-metadata";
 import { DataSource } from 'typeorm';
 import { QueryLogger } from '../utils/QueryLogger';
 import { PropertyConstants } from '../utils/PropertyConstants';
-import { DatabaseInitializationException } from "../exceptions/DatabaseInitializationException";
+import { DatabaseInitializationException } from "../exceptions/CustomExceptions";
 import { ApplicationLogger } from "../utils/ApplicationLogger";
 
 export class DatabaseConnectionConfig {
@@ -22,7 +22,7 @@ export class DatabaseConnectionConfig {
             synchronize: true,
             logging: true,
             logger: new QueryLogger(),
-            entities: ["src/schema/*.ts"]
+            entities: ["backend/schema/*.ts"]
         });
         this.logger = new ApplicationLogger();
     };

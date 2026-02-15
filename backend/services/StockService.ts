@@ -1,67 +1,64 @@
-import { DataSource, Repository } from "typeorm";
-import { StockDao } from "../dao/StockDao";
-import { MedicineStockSchema } from "../schema/MedicineStockSchema";
-import { DatabaseConnectionConfig } from "../config/DatabaseConnectionConfig";
 import { StockRequestModel } from "../models/StockHttpModels/StockRequestModel";
 import { StockMapper } from "../mappers/StockMapper";
-import { OrderMedicineSchema } from "../schema/OrderMedicineSchema";
+import { StockDaoRepository } from "../repository/StockDaoRepository";
+import { StockResponseModel } from "../models/StockHttpModels/StockResponseModel";
+import { BadRequestException, ResourceNotFoundException } from "../exceptions/CustomExceptions";
+import { HttpResponseStatusCodesConstants } from "../utils/HttpResponseStatusCodesConstants";
+import { MedicineDaoRepository } from "../repository/MedicineDaoRepository";
 
-export class StockService implements StockDao {
+export class StockService {
 
-    private dataSource: DataSource;
-    private stockRepository: Repository<MedicineStockSchema>;
+    private stockRepository: StockDaoRepository;
+    private medicineRepository: MedicineDaoRepository;
     private stockMapper: StockMapper;
 
     constructor() {
-        this.dataSource = DatabaseConnectionConfig.getInstance().getDataSource();
-        this.stockRepository = this.dataSource.getRepository(MedicineStockSchema);
+        this.stockRepository = new StockDaoRepository();
+        this.medicineRepository = new MedicineDaoRepository();
         this.stockMapper = new StockMapper();
     }
 
-    public async findAllMedicineStocks(): Promise<MedicineStockSchema[]> {
-        return await this.stockRepository.find();
+    public async fetchAllMedicinesWithStock(): Promise<StockResponseModel[]> {
+        const medicineStocks = await this.stockRepository.findAllMedicineStocks();
+        return await this.stockMapper.mapToStockResponseArray(medicineStocks);
     }
 
-    public async findMedicineStockByMedicineCode(medicineCode: string): Promise<MedicineStockSchema | null> {
-        return await this.stockRepository.findOne({
-            where: {
-                medicine: {
-                    medicineCode: medicineCode
-                }
-            }
-        });
+    public async fetchMedicineWithStock(medicineCode: string): Promise<StockResponseModel | null> {
+        const medicine = await this.medicineRepository.findMedicineByMedicineCode(medicineCode);
+        if (!medicine) {
+            throw new ResourceNotFoundException(
+                HttpResponseStatusCodesConstants.BAD_REQUEST_FAILURE,
+                `Medicine with code ${medicineCode} not found`
+            );
+        }
+        const medicineStock = await this.stockRepository.findMedicineStockByMedicineCode(medicineCode);
+        return medicineStock ? await this.stockMapper.toStockResponse(medicineStock) : null;
     }
 
-    public async saveMedicineStock(stockReq: StockRequestModel): Promise<MedicineStockSchema> {
-        const stock: MedicineStockSchema = await this.stockMapper.toStockEntity(stockReq);
-        return await this.stockRepository.save(stock);
-    }
-
-    public async updateMedicineStock(medicineStock: MedicineStockSchema, stockReq: StockRequestModel): Promise<MedicineStockSchema> {
-        medicineStock.price += stockReq.price;
-        medicineStock.quantity += stockReq.quantity;
-        return await this.stockRepository.save(medicineStock);
-    }
-
-    public async deleteMedicineStock(medicineStock: MedicineStockSchema): Promise<void> {
-        await this.stockRepository.remove(medicineStock);
-    }
-
-    public async updateMedicineStockUponOrder(orderMedicines: OrderMedicineSchema[]): Promise<void> {
-        await Promise.all(orderMedicines.map(async (orderItem) => {
-            const stock: MedicineStockSchema | null = await this.stockRepository.findOne({
-                where: {
-                    medicine: {
-                        medicineCode: orderItem.medicine.medicineCode
-                    }
-                }
-            });
-            if (stock && stock.quantity !== undefined) {
-                stock.quantity -= orderItem.quantity;
-                await this.stockRepository.save(stock);
-            }
-
-        }));
+    public async modifyMedicineStock(stockReq: StockRequestModel): Promise<StockResponseModel> {
+        const isMedicine = await this.medicineRepository.findMedicineByMedicineCode(stockReq.medicineCode);
+        if (!isMedicine) {
+            throw new ResourceNotFoundException(
+                HttpResponseStatusCodesConstants.BAD_REQUEST_FAILURE,
+                `Medicine with code ${stockReq.medicineCode} not found. Please select the correct medicine`
+            );
+        }
+        if (stockReq.price <= 0 || stockReq.quantity <= 0) {
+            throw new BadRequestException(
+                HttpResponseStatusCodesConstants.NOT_ALLOWED_FAILURE,
+                "Price and Qty should be greater than 0"
+            );
+        }
+        const medStock = await this.stockRepository.findMedicineStockByMedicineCode(stockReq.medicineCode);
+        let stockResponse: StockResponseModel;
+        if (!medStock) {
+            const savedStock = await this.stockRepository.saveMedicineStock(stockReq);
+            stockResponse = await this.stockMapper.toStockResponse(savedStock);
+        } else {
+            const savedStock = await this.stockRepository.updateMedicineStock(medStock, stockReq);
+            stockResponse = await this.stockMapper.toStockResponse(savedStock);
+        }
+        return stockResponse;
     }
 
 }

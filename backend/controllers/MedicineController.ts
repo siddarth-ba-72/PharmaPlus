@@ -1,28 +1,17 @@
 import { Request, Response } from "express";
-import { ApplicationLogger } from "../utils/ApplicationLogger";
 import { HttpResponseStatusCodesConstants } from "../utils/HttpResponseStatusCodesConstants";
-import { MedicineMapper } from "../mappers/MedicineMapper";
 import { MedicineRequestModel } from "../models/MedicineHttpModels/MedicineRequestModel";
-import { MedicineResponseModel } from "../models/MedicineHttpModels/MedicineResponseModel";
 import { MedicineUpdateRequestModel } from "../models/MedicineHttpModels/MedicineUpdateRequestModel";
 import { MedicineService } from "../services/MedicineService";
-import { StockService } from "../services/StockService";
-import { HttpResponseMiddleware } from "../middlewares/HttpResponseMiddleware";
+import { AbstractController } from "./AbstractController";
 
-export class MedicineController {
+export class MedicineController extends AbstractController {
 
     private medicineService: MedicineService;
-    private stockService: StockService;
-    private medicineMapper: MedicineMapper;
-    private logger: ApplicationLogger;
-    private httpResponse: HttpResponseMiddleware;
 
     constructor() {
+        super();
         this.medicineService = new MedicineService();
-        this.stockService = new StockService();
-        this.medicineMapper = new MedicineMapper();
-        this.logger = new ApplicationLogger();
-        this.httpResponse = new HttpResponseMiddleware();
     }
 
     /*
@@ -31,7 +20,7 @@ export class MedicineController {
     */
     public getAllMedicines = async (req: Request, res: Response): Promise<void> => {
         try {
-            const medicines = await this.medicineService.findAllMedicines();
+            const medicines = await this.medicineService.fetchAllMedicines();
             if (medicines.length === 0) {
                 this.logger.logInfo("No medicines found");
                 return this.httpResponse.sendHttpResponse(
@@ -41,10 +30,9 @@ export class MedicineController {
                 });
             } else {
                 this.logger.logInfo(`Found ${medicines.length} medicines`);
-                const medicinesResponse = await this.medicineMapper.mapToMedicineResponseArray(medicines);
                 return this.httpResponse.sendHttpResponse(
                     res, HttpResponseStatusCodesConstants.RETRIEVED_SUCCESS, {
-                    medicines: medicinesResponse
+                    medicines
                 });
             }
         } catch (error: any) {
@@ -63,19 +51,12 @@ export class MedicineController {
     public addMedicine = async (req: Request, res: Response): Promise<void> => {
         try {
             const medicineRequest: MedicineRequestModel = req.body as MedicineRequestModel;
-            const existingMedicine = await this.medicineService.findMedicineByMedicineName(medicineRequest.medicineName);
-            if (existingMedicine) {
-                this.logger.logError("Medicine already exists");
-                return this.httpResponse.sendHttpResponse(
-                    res, HttpResponseStatusCodesConstants.NOT_ALLOWED_FAILURE, {
-                    message: "Medicine already exists",
-                });
-            }
-            const savedMedicine = await this.medicineService.addMedicine(medicineRequest);
-            const medicineResponse: MedicineResponseModel = await this.medicineMapper.mapToMedicineResponse(savedMedicine);
+            const savedMedicine = await this.medicineService.addMedicineDetails(medicineRequest);
             this.logger.logInfo(`Medicine ${savedMedicine.medicineName} saved successfully`);
             return this.httpResponse.sendHttpResponse(
-                res, HttpResponseStatusCodesConstants.CREATED_SUCCESS, { medicine: medicineResponse });
+                res, HttpResponseStatusCodesConstants.CREATED_SUCCESS, {
+                savedMedicine
+            });
         } catch (error: any) {
             this.logger.logError(error.message);
             return this.httpResponse.sendHttpResponse(
@@ -92,17 +73,12 @@ export class MedicineController {
     public updateMedicine = async (req: Request, res: Response): Promise<void> => {
         try {
             const medicineCode = req.query.medicineCode as string;
-            const medicine = await this.medicineService.findMedicineByMedicineCode(medicineCode);
-            if (!medicine) {
-                this.logger.logError("Medicine not found");
-                return this.httpResponse.sendHttpResponse(
-                    res, HttpResponseStatusCodesConstants.NOT_FOUND_FAILURE, { message: "Medicine not found" });
-            }
             const medicineUpdateReq: MedicineUpdateRequestModel = req.body as MedicineUpdateRequestModel;
-            await this.medicineService.updateMedicineDetails(medicine, medicineUpdateReq);
-            const medicineResponse: MedicineResponseModel = await this.medicineMapper.mapToMedicineResponse(medicine);
+            const medicine = await this.medicineService.updateMedicineDetails(medicineCode, medicineUpdateReq);
             return this.httpResponse.sendHttpResponse(
-                res, HttpResponseStatusCodesConstants.CREATED_SUCCESS, { medicine: medicineResponse });
+                res, HttpResponseStatusCodesConstants.CREATED_SUCCESS, {
+                medicine
+            });
         } catch (error: any) {
             this.logger.logError(error.message);
             return this.httpResponse.sendHttpResponse(
@@ -119,21 +95,12 @@ export class MedicineController {
     public deleteMedicine = async (req: Request, res: Response): Promise<void> => {
         try {
             const medicineCode = req.query.medicineCode as string;
-            const medicine = await this.medicineService.findMedicineByMedicineCode(medicineCode);
-            if (!medicine) {
-                this.logger.logError("Medicine not found");
-                return this.httpResponse.sendHttpResponse(
-                    res, HttpResponseStatusCodesConstants.NOT_FOUND_FAILURE, { message: "Medicine not found" });
-            }
-            const medicineStock = await this.stockService.findMedicineStockByMedicineCode(medicineCode);
-            if (medicineStock) {
-                await this.stockService.deleteMedicineStock(medicineStock);
-                this.logger.logDebug(`Medicine stock for ${medicine.medicineName} deleted succesfully`);
-            }
-            await this.medicineService.deleteMedicineRecord(medicine);
-            this.logger.logDebug(`Medicine ${medicine.medicineName} deleted successfully`);
+            await this.medicineService.deleteMedicineRecord(medicineCode);
+            this.logger.logDebug(`Medicine ${medicineCode} deleted successfully`);
             return this.httpResponse.sendHttpResponse(
-                res, HttpResponseStatusCodesConstants.RETRIEVED_SUCCESS, { message: `Medicine record for ${medicine.medicineName} deleted successfully!` });
+                res, HttpResponseStatusCodesConstants.RETRIEVED_SUCCESS, {
+                message: `Medicine record for ${medicineCode} deleted successfully!`
+            });
         } catch (error: any) {
             this.logger.logError(error.message);
             return this.httpResponse.sendHttpResponse(

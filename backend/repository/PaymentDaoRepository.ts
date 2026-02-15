@@ -5,7 +5,7 @@ import { PaymentSchema } from "../schema/PaymentSchema";
 import { OrderRequestModel } from "../models/OrderHttpModels/OrderRequestModel";
 import { PaymentMapper } from "../mappers/PaymentMapper";
 
-export class PaymentService implements PaymentDao {
+export class PaymentDaoRepository implements PaymentDao {
 
     private dataSource: DataSource;
     private paymentRepository: Repository<PaymentSchema>;

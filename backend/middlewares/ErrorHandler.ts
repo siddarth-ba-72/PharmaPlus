@@ -1,26 +1,31 @@
-import { UnAuthorizedAccessException } from "../exceptions/UnAuthorizedAccessException";
-import { BadRequestException } from "../exceptions/BadRequestException";
 import { NextFunction, Request, Response } from "express";
-import { DatabaseInitializationException } from "../exceptions/DatabaseInitializationException";
+import { HttpResponseMiddleware } from "./HttpResponseMiddleware";
+import { AbstractException } from "../exceptions/AbstractException";
+import { HttpResponseStatusCodesConstants } from "../utils/HttpResponseStatusCodesConstants";
+import { ApplicationLogger } from "../utils/ApplicationLogger";
 
 class ErrorHandler {
 
-    // ! Handle Different Types of Errors in this Middleware
+    protected httpResponse: HttpResponseMiddleware;
+    private logger: ApplicationLogger;
+
+    constructor() {
+        this.httpResponse = new HttpResponseMiddleware();
+        this.logger = new ApplicationLogger();
+    }
 
     public handleErrors = (error: Error, req: Request, res: Response, next: NextFunction) => {
-
-        if (error instanceof BadRequestException) {
-            return res.status(error.responseStatusCode)
-                .json({ error: error.message });
+        this.logger.logError(`Error occurred: ${error.message}`);
+        if (error instanceof AbstractException) {
+            return this.httpResponse.sendHttpResponse(res, error.statusCode, {
+                message: error.message,
+            });
+        } else if (error instanceof Error) {
+            return this.httpResponse.sendHttpResponse(
+                res, HttpResponseStatusCodesConstants.INTERNAL_SERVER_FAILURE, {
+                message: `Something went wrong! : ${error.message}`,
+            });
         }
-        else if (error instanceof UnAuthorizedAccessException) {
-            return res.status(error.responseStatusCode)
-                .json({ error: error.message });
-        } else if (error instanceof DatabaseInitializationException) {
-            return res.status(error.responseStatusCode)
-                .json({ error: error.message });
-        }
-
     }
 
 }

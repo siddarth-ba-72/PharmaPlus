@@ -1,75 +1,16 @@
-import { StockMapper } from "../mappers/StockMapper";
-import { ApplicationLogger } from "../utils/ApplicationLogger";
 import { Request, Response } from "express";
 import { HttpResponseStatusCodesConstants } from "../utils/HttpResponseStatusCodesConstants";
 import { StockRequestModel } from "../models/StockHttpModels/StockRequestModel";
-import { StockResponseModel } from "../models/StockHttpModels/StockResponseModel";
-import { MedicineService } from "../services/MedicineService";
 import { StockService } from "../services/StockService";
-import { HttpResponseMiddleware } from "../middlewares/HttpResponseMiddleware";
+import { AbstractController } from "./AbstractController";
 
-export class StockController {
+export class StockController extends AbstractController {
 
     private stockService: StockService;
-    private medicineService: MedicineService;
-    private stockMapper: StockMapper;
-    private logger: ApplicationLogger;
-    private httpResponse: HttpResponseMiddleware;
 
     constructor() {
+        super();
         this.stockService = new StockService();
-        this.medicineService = new MedicineService();
-        this.stockMapper = new StockMapper();
-        this.logger = new ApplicationLogger();
-        this.httpResponse = new HttpResponseMiddleware();
-    }
-
-    /*
-    * POST/ modify-stock/
-    * Admin Access
-    */
-    public modifyStock = async (req: Request, res: Response): Promise<void> => {
-        try {
-            const stockReq = req.body as StockRequestModel;
-            const isMedicine = await this.medicineService.findMedicineByMedicineCode(stockReq.medicineCode);
-            if (!isMedicine) {
-                this.logger.logError("Medicine not found");
-                return this.httpResponse.sendHttpResponse(
-                    res, HttpResponseStatusCodesConstants.NOT_FOUND_FAILURE, {
-                    message: "Please select the correct medicine",
-                });
-            }
-            if (stockReq.price <= 0 || stockReq.quantity <= 0) {
-                this.logger.logError("Price and qty cannot be less that 0");
-                return this.httpResponse.sendHttpResponse(
-                    res, HttpResponseStatusCodesConstants.NOT_ALLOWED_FAILURE, {
-                    message: "Price and Qty should be greater that 0"
-                });
-            }
-            const medStock = await this.stockService.findMedicineStockByMedicineCode(stockReq.medicineCode);
-            if (!medStock) {
-                const savedStock = await this.stockService.saveMedicineStock(stockReq);
-                const stockResponse = await this.stockMapper.toStockResponse(savedStock);
-                return this.httpResponse.sendHttpResponse(
-                    res, HttpResponseStatusCodesConstants.CREATED_SUCCESS, {
-                    message: `Stock for ${stockReq.medicineCode} created successfully`,
-                    medicine: stockResponse
-                });
-            } else {
-                const savedStock = await this.stockService.updateMedicineStock(medStock, stockReq);
-                const stockResponse = await this.stockMapper.toStockResponse(savedStock);
-                return this.httpResponse.sendHttpResponse(
-                    res, HttpResponseStatusCodesConstants.CREATED_SUCCESS, {
-                    medicine: stockResponse
-                });
-            }
-        } catch (error: any) {
-            this.logger.logError(error.message);
-            return this.httpResponse.sendHttpResponse(
-                res, HttpResponseStatusCodesConstants.INTERNAL_SERVER_FAILURE, {
-                message: error.message
-            });
-        }
     }
 
     /*
@@ -78,24 +19,23 @@ export class StockController {
     */
     public getAllMedicinesWithStock = async (req: Request, res: Response): Promise<void> => {
         try {
-            const medicineStocks = await this.stockService.findAllMedicineStocks();
+            const medicineStocks = await this.stockService.fetchAllMedicinesWithStock();
             if (medicineStocks.length === 0) {
                 this.logger.logInfo("Stocks are empty for all the medicines");
-                return this.httpResponse.sendHttpResponse(
+                this.httpResponse.sendHttpResponse(
                     res, HttpResponseStatusCodesConstants.NO_CONTENT_SUCCESS, {
                     message: "Stocks are empty for all the medicines"
                 });
             } else {
                 this.logger.logInfo(`Found ${medicineStocks.length} medicines with active stocks`);
-                const stockResponse = await this.stockMapper.mapToStockResponseArray(medicineStocks);
-                return this.httpResponse.sendHttpResponse(
+                this.httpResponse.sendHttpResponse(
                     res, HttpResponseStatusCodesConstants.RETRIEVED_SUCCESS, {
-                    medicinesWithStocks: stockResponse
+                    medicineStocks
                 });
             }
         } catch (error: any) {
             this.logger.logError(error.message);
-            return this.httpResponse.sendHttpResponse(
+            this.httpResponse.sendHttpResponse(
                 res, HttpResponseStatusCodesConstants.INTERNAL_SERVER_FAILURE, {
                 message: error.message
             });
@@ -109,25 +49,40 @@ export class StockController {
     public getMedicineWithStock = async (req: Request, res: Response): Promise<void> => {
         try {
             const { medicineCode } = req.params;
-            const medicine = await this.medicineService.findMedicineByMedicineCode(medicineCode);
-            if (!medicine) {
-                this.logger.logError("Medicine not found");
-                return this.httpResponse.sendHttpResponse(
-                    res, HttpResponseStatusCodesConstants.NOT_FOUND_FAILURE, {
-                    message: "Medicine not found"
-                });
-            }
-            const medicineStock = await this.stockService.findMedicineStockByMedicineCode(medicineCode);
-            if (!medicineStock) {
+            const medicineStock = await this.stockService.fetchMedicineWithStock(medicineCode);
+            if (medicineStock === null) {
                 this.logger.logError("No stocks for this medicine")
                 return this.httpResponse.sendHttpResponse(
                     res, HttpResponseStatusCodesConstants.NO_CONTENT_SUCCESS, {
-                    message: `There are no stocks for ${medicine.medicineName}`
+                    message: `There are no stocks for ${medicineCode}`
                 });
             }
-            const medicineStockResponse: StockResponseModel | null = medicineStock ? await this.stockMapper.toStockResponse(medicineStock) : null;
             return this.httpResponse.sendHttpResponse(
-                res, HttpResponseStatusCodesConstants.RETRIEVED_SUCCESS, { medicine: medicineStockResponse });
+                res, HttpResponseStatusCodesConstants.RETRIEVED_SUCCESS, {
+                medicineStock
+            });
+        } catch (error: any) {
+            this.logger.logError(error.message);
+            return this.httpResponse.sendHttpResponse(
+                res, HttpResponseStatusCodesConstants.INTERNAL_SERVER_FAILURE, {
+                message: error.message
+            });
+        }
+    }
+
+    /*
+    * POST/ modify-stock/
+    * Admin Access
+    */
+    public modifyStock = async (req: Request, res: Response): Promise<void> => {
+        try {
+            const stockReq = req.body as StockRequestModel;
+            const stockResponse = await this.stockService.modifyMedicineStock(stockReq);
+            return this.httpResponse.sendHttpResponse(
+                res, HttpResponseStatusCodesConstants.CREATED_SUCCESS, {
+                message: `Stock for ${stockReq.medicineCode} updated successfully`,
+                stockResponse
+            });
         } catch (error: any) {
             this.logger.logError(error.message);
             return this.httpResponse.sendHttpResponse(
