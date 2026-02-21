@@ -1,10 +1,11 @@
 import { configureStore } from '@reduxjs/toolkit'
-// import counterReducer from '../redux-reducers/counterSlice'
 import counterStateManager from '../redux-state-managers/CounterStateManager'
+import UserAuthStateManager from '../redux-state-managers/UserAuthStateManager'
 
 export const ReduxStore = configureStore({
     reducer: {
         counter: counterStateManager,
+        userAuth: UserAuthStateManager,
     },
 })
 

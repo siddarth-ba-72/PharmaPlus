@@ -12,6 +12,7 @@ export class JwtAuthentication {
             lastName: user.lastName,
             emailId: user.emailId,
             isAdmin: user.isAdmin,
+            age: user.age,
         }
         return jwt.sign(payload, PropertyConstants.JWT_SECRET, { expiresIn: '1h' });
     }
@@ -32,6 +33,7 @@ export class JwtAuthentication {
             lastName: user.lastName,
             emailId: user.emailId,
             isAdmin: user.isAdmin,
+            age: user.age,
         }
         return jwt.sign(payload, PropertyConstants.JWT_PASSWORD_SECRET, { expiresIn: '15m' });
     }

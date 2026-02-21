@@ -4,6 +4,7 @@ export class UserResponseModel {
     firstName!: string;
     lastName!: string;
     emailId!: string;
+    age!: number;
     isAdmin?: boolean;
 
 }

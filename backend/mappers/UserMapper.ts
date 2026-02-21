@@ -22,6 +22,7 @@ export class UserMapper {
         userResponse.firstName = user.firstName;
         userResponse.lastName = user.lastName;
         userResponse.emailId = user.emailId;
+        userResponse.age = user.age;
         userResponse.isAdmin = user.isAdmin;
         return userResponse;
     }
