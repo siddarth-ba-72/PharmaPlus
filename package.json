@@ -8,8 +8,10 @@
     "start": "concurrently \"npm run backend\" \"npm run client\"",
     "backend": "nodemon ./backend/PharmaPlusApplication.ts",
     "client": "npm start --prefix client",
-    "test": "jest --passWithNoTests",
-    "test:watch": "jest --watch"
+    "test": "jest --config jest.config.js --passWithNoTests",
+    "test:watch": "jest --config jest.config.js --watch",
+    "test:backend": "jest --config jest.config.js",
+    "test:backend:coverage": "jest --config jest.config.js --coverage"
   },
   "keywords": [],
   "author": "",

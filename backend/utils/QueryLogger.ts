@@ -5,9 +5,7 @@ import path from "path";
 import fs from "fs";
 
 const logDir = path.join(__dirname, "../logs");
-if (!fs.existsSync(logDir)) {
-    fs.mkdirSync(logDir);
-}
+fs.mkdirSync(logDir, { recursive: true });
 
 const queryLogger = winston.createLogger({
     level: "debug",

@@ -11,9 +11,7 @@ export class ApplicationLogger {
     constructor() {
         // Log directory setup
         this.logDir = path.join(__dirname, "../logs");
-        if (!fs.existsSync(this.logDir)) {
-            fs.mkdirSync(this.logDir);
-        }
+        fs.mkdirSync(this.logDir, { recursive: true });
 
         // Read and print banner from src/utils/banner.txt
         this.bannerPath = path.join(__dirname, "banner.txt");
