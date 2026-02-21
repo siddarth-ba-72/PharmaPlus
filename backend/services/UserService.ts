@@ -47,9 +47,6 @@ export class UserService {
 
     public async findIfUserExistsByUserName(userRequest: UserRegisterRequestModel): Promise<Boolean> {
         const user = await this.userRepository.findUserByUserName(userRequest.userName);
-        if (!user) {
-            throw new ResourceNotFoundException(HttpResponseStatusCodesConstants.NOT_FOUND_FAILURE, "User not found");
-        }
         return user !== null;
     }
 
