@@ -48,9 +48,9 @@ export class UserController extends AbstractController {
 	public getCurrentUser = AsyncRequestHandler.handleRequest(async (req: Request, res: Response): Promise<void> => {
 		const user = await this.userService.fetchCurrentLoggedInUser(req);
 		if (!user || user === null) {
-			this.logger.logError("User not found");
-			this.httpResponse.sendHttpResponse(
-				res, HttpResponseStatusCodesConstants.NOT_FOUND_FAILURE, {
+			this.logger.logWarn("User not found");
+			return await this.httpResponse.sendHttpResponse(
+				res, HttpResponseStatusCodesConstants.RETRIEVED_SUCCESS, {
 				message: "User not found"
 			});
 		}

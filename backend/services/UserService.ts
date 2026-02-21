@@ -40,7 +40,7 @@ export class UserService {
     public async fetchCurrentLoggedInUser(request: Request): Promise<UserResponseModel | null> {
         const user: UserSchema | null = request.body.user as UserSchema;
         if (!user) {
-            throw new ResourceNotFoundException(HttpResponseStatusCodesConstants.NOT_FOUND_FAILURE, "User not found");
+            return null;
         }
         return await this.userMapper.mapToUserResponse(user);
     }

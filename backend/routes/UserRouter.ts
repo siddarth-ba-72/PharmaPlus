@@ -20,7 +20,7 @@ class UserRoutes {
         this.router.post("/login-user", this.userController.loginUser);
         this.router.get("/logout", this.authMiddleware.authenticate, this.userController.logOutUser);
         this.router.get("/all-users", this.authMiddleware.authenticateAdmin, this.userController.getAllUsers);
-        this.router.get("/current-user", this.authMiddleware.authenticate, this.userController.getCurrentUser);
+        this.router.get("/current-user", this.userController.getCurrentUser);
         this.router.put("/update-user", this.authMiddleware.authenticate, this.userController.updateUserDetails);
         this.router.put("/change-password", this.authMiddleware.authenticate, this.userController.updateUserPassword);
         this.router.get("/forgot-password", this.authMiddleware.checkIsNotLoggedIn, this.userController.forgotPassword);
