@@ -1,3 +1,4 @@
+import 'express-async-errors';
 import express from 'express';
 import { PropertyConstants } from './utils/PropertyConstants';
 import { DatabaseConnectionConfig } from './config/DatabaseConnectionConfig';
@@ -21,6 +22,7 @@ class PharmaPlusApplication {
         this.initializeDatabase();
         this.initializeMiddlewares();
         this.initializeRoutes();
+        this.initializeErrorMiddleware();
         this.startServer();
     }
 
@@ -51,6 +53,16 @@ class PharmaPlusApplication {
             })
             .catch((error) => {
                 console.error("Error initializing routes: ", error);
+            });
+    }
+
+    private initializeErrorMiddleware(): void {
+        this.appMiddlewareConfig.initializeErrorMiddleware(this.app)
+            .then(() => {
+                console.log("Error middleware initialized successfully.");
+            })
+            .catch((error) => {
+                console.error("Error initializing error middleware: ", error);
             });
     }
 

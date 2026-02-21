@@ -1,133 +1,111 @@
 import { NextFunction, Request, Response } from "express";
 import { JwtAuthentication } from "../utils/JwtAuthentication";
-import { DataSource, Repository } from "typeorm";
-import { UserSchema } from "../schema/UserSchema";
-import { DatabaseConnectionConfig } from "../config/DatabaseConnectionConfig";
 import { HttpResponseMiddleware } from "./HttpResponseMiddleware";
 import { HttpResponseStatusCodesConstants } from "../utils/HttpResponseStatusCodesConstants";
 import { ApplicationLogger } from "../utils/ApplicationLogger";
+import { UnAuthorizedAccessException } from "../exceptions/CustomExceptions";
+import { UserDao } from "../dao/UserDao";
+import { UserDaoRepository } from "../repository/UserDaoRepository";
+import { AsyncRequestHandler } from "./AsyncRequestHandler";
 
 export class AuthenticationMiddleware {
 
-    private dataSource: DataSource;
-    private userRepository: Repository<UserSchema>;
+    private userRepository: UserDao;
     private httpResponse: HttpResponseMiddleware;
     private logger: ApplicationLogger;
 
     constructor() {
-        this.dataSource = DatabaseConnectionConfig.getInstance().getDataSource();
-        this.userRepository = this.dataSource.getRepository(UserSchema);
+        this.userRepository = new UserDaoRepository();
         this.httpResponse = new HttpResponseMiddleware();
         this.logger = new ApplicationLogger();
     }
 
-    public checkIsNotLoggedIn = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    public checkIsNotLoggedIn = AsyncRequestHandler.handleRequest(async (req: Request, res: Response, next: NextFunction): Promise<void> => {
         const authToken = req.cookies.auth_token;
         if (authToken) {
             this.logger.logInfo("User already logged in");
-            await this.httpResponse.sendHttpResponse(
+            return await this.httpResponse.sendHttpResponse(
                 res, HttpResponseStatusCodesConstants.RETRIEVED_SUCCESS, {
                 message: "User already logged in"
             });
         }
+        return next();
+    });
+
+    public authenticate = AsyncRequestHandler.handleRequest(async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+        const authToken = req.cookies.auth_token;
+        if (!authToken) {
+            this.logger.logError("Invalid or expired token");
+            throw new UnAuthorizedAccessException(
+                HttpResponseStatusCodesConstants.FORBIDDEN_FAILURE,
+                "Unauthorized Access"
+            );
+        }
+        const decodedUser: any = JSON.parse(await JwtAuthentication.verify(authToken));
+        if (!decodedUser) {
+            this.logger.logError("Invalid or expired token");
+            throw new UnAuthorizedAccessException(
+                HttpResponseStatusCodesConstants.FORBIDDEN_FAILURE,
+                "Unauthorized Access"
+            );
+        }
+
+        const user = await this.userRepository.findUserById(decodedUser.userId);
+
+        if (!user) {
+            this.logger.logError("Invalid or expired token");
+            throw new UnAuthorizedAccessException(
+                HttpResponseStatusCodesConstants.FORBIDDEN_FAILURE,
+                "Unauthorized Access"
+            );
+        }
+
+        req.body.user = user;
         next();
-    }
+    });
 
-    public authenticate = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-        try {
-            const authToken = req.cookies.auth_token;
-            if (!authToken) {
-                this.logger.logError("Invalid or expired token");
-                return await this.httpResponse.sendHttpResponse(
-                    res, HttpResponseStatusCodesConstants.FORBIDDEN_FAILURE, {
-                    message: "Unauthorized Access"
-                });
-            }
-            const decodedUser: any = JSON.parse(await JwtAuthentication.verify(authToken));
-            if (!decodedUser) {
-                this.logger.logError("Invalid or expired token");
-                return await this.httpResponse.sendHttpResponse(
-                    res, HttpResponseStatusCodesConstants.FORBIDDEN_FAILURE, {
-                    message: "Unauthorized Access"
-                });
-            }
-
-            const user = await this.userRepository.findOne({
-                where: { userId: decodedUser.userId },
+    public authenticateAdmin = AsyncRequestHandler.handleRequest(async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+        const authToken = req.cookies.auth_token;
+        if (!authToken) {
+            this.logger.logError("Invalid or expired token");
+            await this.httpResponse.sendHttpResponse(
+                res, HttpResponseStatusCodesConstants.FORBIDDEN_FAILURE, {
+                message: "Unauthorized Access"
             });
+            return;
+        }
 
-            if (!user) {
-                this.logger.logError("Invalid or expired token");
-                return await this.httpResponse.sendHttpResponse(
-                    res, HttpResponseStatusCodesConstants.FORBIDDEN_FAILURE, {
-                    message: "Unauthorized Access"
-                });
-            }
+        const decodedUser: any = JSON.parse(await JwtAuthentication.verify(authToken));
+        if (!decodedUser) {
+            this.logger.logError("Invalid or expired token");
+            await this.httpResponse.sendHttpResponse(
+                res, HttpResponseStatusCodesConstants.FORBIDDEN_FAILURE, {
+                message: "Unauthorized Access"
+            });
+            return;
+        }
 
-            req.body.user = user;
-            next();
-        } catch (error: any) {
-            this.logger.logError(error.message);
-            return this.httpResponse.sendHttpResponse(
-                res, HttpResponseStatusCodesConstants.INTERNAL_SERVER_FAILURE, {
-                message: "Something went wrong!",
+        const user = await this.userRepository.findUserById(decodedUser.userId);
+        if (!user) {
+            this.logger.logError("Invalid or expired token");
+            return await this.httpResponse.sendHttpResponse(
+                res, HttpResponseStatusCodesConstants.FORBIDDEN_FAILURE, {
+                message: "Unauthorized Access"
             });
         }
-    }
 
-    public authenticateAdmin = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-        try {
-            const authToken = req.cookies.auth_token;
-            if (!authToken) {
-                this.logger.logError("Invalid or expired token");
-                await this.httpResponse.sendHttpResponse(
-                    res, HttpResponseStatusCodesConstants.FORBIDDEN_FAILURE, {
-                    message: "Unauthorized Access"
-                });
-                return;
-            }
-
-            const decodedUser: any = JSON.parse(await JwtAuthentication.verify(authToken));
-            if (!decodedUser) {
-                this.logger.logError("Invalid or expired token");
-                await this.httpResponse.sendHttpResponse(
-                    res, HttpResponseStatusCodesConstants.FORBIDDEN_FAILURE, {
-                    message: "Unauthorized Access"
-                });
-                return;
-            }
-
-            const user = await this.userRepository.findOne({
-                where: { userId: decodedUser.userId },
-            });
-
-            if (!user) {
-                this.logger.logError("Invalid or expired token");
-                return await this.httpResponse.sendHttpResponse(
-                    res, HttpResponseStatusCodesConstants.FORBIDDEN_FAILURE, {
-                    message: "Unauthorized Access"
-                });
-            }
-
-            if (!user.isAdmin) {
-                return await this.httpResponse.sendHttpResponse(
-                    res, HttpResponseStatusCodesConstants.FORBIDDEN_FAILURE, {
-                    message: "Unauthorized Access"
-                });
-            }
-
-            req.body.user = user;
-            next();
-        } catch (error: any) {
-            this.logger.logError(error.message);
-            return this.httpResponse.sendHttpResponse(
-                res, HttpResponseStatusCodesConstants.INTERNAL_SERVER_FAILURE, {
-                message: "Something went wrong!",
+        if (!user.isAdmin) {
+            return await this.httpResponse.sendHttpResponse(
+                res, HttpResponseStatusCodesConstants.FORBIDDEN_FAILURE, {
+                message: "Unauthorized Access"
             });
         }
-    }
 
-    public checkResetToken = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+        req.body.user = user;
+        next();
+    });
+
+    public checkResetToken = AsyncRequestHandler.handleRequest(async (req: Request, res: Response, next: NextFunction): Promise<void> => {
         const resetPasswordToken = req.cookies.reset_password_token;
         if (!resetPasswordToken) {
             return await this.httpResponse.sendHttpResponse(
@@ -136,35 +114,25 @@ export class AuthenticationMiddleware {
             });
         }
 
-        try {
-            const decodedUser: any = JSON.parse(await JwtAuthentication.verifyPasswordToken(resetPasswordToken));
-            if (!decodedUser) {
-                return await this.httpResponse.sendHttpResponse(
-                    res, HttpResponseStatusCodesConstants.FORBIDDEN_FAILURE, {
-                    message: "Unauthorized Access"
-                });
-            }
-
-            const user = await this.userRepository.findOne({
-                where: { userId: decodedUser.userId },
-            });
-
-            if (!user) {
-                return await this.httpResponse.sendHttpResponse(
-                    res, HttpResponseStatusCodesConstants.NOT_FOUND_FAILURE, {
-                    message: "Invalid token"
-                });
-            }
-
-            req.body.resetPasswordUser = user;
-            next();
-        } catch (error: any) {
-            this.logger.logError(error.message);
-            return this.httpResponse.sendHttpResponse(
-                res, HttpResponseStatusCodesConstants.INTERNAL_SERVER_FAILURE, {
-                message: "Something went wrong!",
+        const decodedUser: any = JSON.parse(await JwtAuthentication.verifyPasswordToken(resetPasswordToken));
+        if (!decodedUser) {
+            return await this.httpResponse.sendHttpResponse(
+                res, HttpResponseStatusCodesConstants.FORBIDDEN_FAILURE, {
+                message: "Unauthorized Access"
             });
         }
-    }
+
+        const user = await this.userRepository.findUserById(decodedUser.userId);
+
+        if (!user) {
+            return await this.httpResponse.sendHttpResponse(
+                res, HttpResponseStatusCodesConstants.NOT_FOUND_FAILURE, {
+                message: "Invalid token"
+            });
+        }
+
+        req.body.resetPasswordUser = user;
+        next();
+    });
 
 }

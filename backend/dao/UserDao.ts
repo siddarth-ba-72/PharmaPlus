@@ -6,6 +6,8 @@ export interface UserDao {
 
     findAllUsers(): Promise<UserSchema[]>;
 
+    findUserById(userId: number): Promise<UserSchema | null>;
+
     findUserByUserName(userName: string): Promise<UserSchema | null>;
 
     findUserByEmailId(emailId: string): Promise<UserSchema | null>;

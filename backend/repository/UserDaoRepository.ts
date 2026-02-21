@@ -23,6 +23,14 @@ export class UserDaoRepository implements UserDao {
         return await this.userRepository.find();
     }
 
+    public async findUserById(userId: number): Promise<UserSchema | null> {
+        return await this.userRepository.findOne({
+            where: {
+                userId: userId
+            }
+        });
+    }
+
     public async findUserByUserName(userName: string): Promise<UserSchema | null> {
         return await this.userRepository.findOne({
             where: {
