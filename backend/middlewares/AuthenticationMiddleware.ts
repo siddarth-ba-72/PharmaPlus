@@ -4,18 +4,14 @@ import { HttpResponseMiddleware } from "./HttpResponseMiddleware";
 import { HttpResponseStatusCodesConstants } from "../utils/HttpResponseStatusCodesConstants";
 import { ApplicationLogger } from "../utils/ApplicationLogger";
 import { UnAuthorizedAccessException } from "../exceptions/CustomExceptions";
-import { UserDao } from "../dao/UserDao";
-import { UserDaoRepository } from "../repository/UserDaoRepository";
 import { AsyncRequestHandler } from "./AsyncRequestHandler";
 
 export class AuthenticationMiddleware {
 
-    private userRepository: UserDao;
     private httpResponse: HttpResponseMiddleware;
     private logger: ApplicationLogger;
 
     constructor() {
-        this.userRepository = new UserDaoRepository();
         this.httpResponse = new HttpResponseMiddleware();
         this.logger = new ApplicationLogger();
     }
@@ -50,17 +46,25 @@ export class AuthenticationMiddleware {
             );
         }
 
-        const user = await this.userRepository.findUserById(decodedUser.userId);
+        const { iat, exp, ...userDetails } = decodedUser;
+        req.body.user = userDetails;
+        next();
+    });
 
-        if (!user) {
-            this.logger.logError("Invalid or expired token");
-            throw new UnAuthorizedAccessException(
-                HttpResponseStatusCodesConstants.FORBIDDEN_FAILURE,
-                "Unauthorized Access"
-            );
+    public checkAndAuthenticate = AsyncRequestHandler.handleRequest(async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+        const authToken = req.cookies.auth_token;
+        if (!authToken) {
+            this.logger.logWarn("No token found, proceeding without authentication");
+            return next();
+        }
+        const decodedUser: any = JSON.parse(await JwtAuthentication.verify(authToken));
+        if (!decodedUser) {
+            this.logger.logWarn("No user information found in token, proceeding without authentication");
+            return next();
         }
 
-        req.body.user = user;
+        const { iat, exp, ...userDetails } = decodedUser;
+        req.body.user = userDetails;
         next();
     });
 
@@ -85,23 +89,15 @@ export class AuthenticationMiddleware {
             return;
         }
 
-        const user = await this.userRepository.findUserById(decodedUser.userId);
-        if (!user) {
-            this.logger.logError("Invalid or expired token");
+        if (!decodedUser.isAdmin) {
             return await this.httpResponse.sendHttpResponse(
                 res, HttpResponseStatusCodesConstants.FORBIDDEN_FAILURE, {
                 message: "Unauthorized Access"
             });
         }
 
-        if (!user.isAdmin) {
-            return await this.httpResponse.sendHttpResponse(
-                res, HttpResponseStatusCodesConstants.FORBIDDEN_FAILURE, {
-                message: "Unauthorized Access"
-            });
-        }
-
-        req.body.user = user;
+        const { iat, exp, ...userDetails } = decodedUser;
+        req.body.user = userDetails;
         next();
     });
 
@@ -122,16 +118,8 @@ export class AuthenticationMiddleware {
             });
         }
 
-        const user = await this.userRepository.findUserById(decodedUser.userId);
-
-        if (!user) {
-            return await this.httpResponse.sendHttpResponse(
-                res, HttpResponseStatusCodesConstants.NOT_FOUND_FAILURE, {
-                message: "Invalid token"
-            });
-        }
-
-        req.body.resetPasswordUser = user;
+        const { iat, exp, ...userDetails } = decodedUser;
+        req.body.resetPasswordUser = userDetails;
         next();
     });
 

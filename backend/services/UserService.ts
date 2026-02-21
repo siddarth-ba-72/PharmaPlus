@@ -38,11 +38,11 @@ export class UserService {
     }
 
     public async fetchCurrentLoggedInUser(request: Request): Promise<UserResponseModel | null> {
-        const user: UserSchema | null = request.body.user as UserSchema;
+        const user: UserResponseModel | null = request.body.user as UserResponseModel;
         if (!user) {
             return null;
         }
-        return await this.userMapper.mapToUserResponse(user);
+        return user;
     }
 
     public async findIfUserExistsByUserName(userRequest: UserRegisterRequestModel): Promise<Boolean> {
@@ -56,7 +56,7 @@ export class UserService {
         if (!savedUser) {
             throw new BadRequestException(HttpResponseStatusCodesConstants.BAD_REQUEST_FAILURE, "User registration failed");
         }
-        const token = await JwtAuthentication.generateToken(savedUser.userId);
+        const token = await JwtAuthentication.generateToken(savedUser);
         res.cookie("auth_token", token, {
             httpOnly: true,
             secure: false, // Set to true in production
@@ -76,7 +76,7 @@ export class UserService {
             throw new ResourceNotFoundException(HttpResponseStatusCodesConstants.BAD_REQUEST_FAILURE, "Invalid password");
         }
         res.clearCookie("auth_token");
-        const token = await JwtAuthentication.generateToken(user.userId);
+        const token = await JwtAuthentication.generateToken(user);
         res.cookie("auth_token", token, {
             httpOnly: true,
             secure: false, // Set to true in production
@@ -100,7 +100,7 @@ export class UserService {
     }
 
     public async updateUserPassword(req: Request, passwordUpdateRequest: UserPasswordUpdateRequest): Promise<UserResponseModel> {
-        const user = await this.userRepository.findUserByEmailId(req.body.user?.username);
+        const user = await this.userRepository.findUserByUserName(req.body.user?.username);
         if (!user) {
             throw new ResourceNotFoundException(HttpResponseStatusCodesConstants.BAD_REQUEST_FAILURE, "User not found");
         }
@@ -123,7 +123,7 @@ export class UserService {
         if (!user) {
             throw new ResourceNotFoundException(HttpResponseStatusCodesConstants.BAD_REQUEST_FAILURE, "User not found");
         }
-        const token = await JwtAuthentication.generateResetPasswordToken(user.userId);
+        const token = await JwtAuthentication.generateResetPasswordToken(user);
         res.cookie("reset_password_token", token, {
             httpOnly: true,
             secure: false,
@@ -134,9 +134,13 @@ export class UserService {
     }
 
     public async processResetPassword(req: Request, passwordResetReq: UserResetPasswordModel, res: Response): Promise<UserResponseModel> {
-        const user = req.body.resetPasswordUser;
-        if (!user) {
+        const jwtUser: UserResponseModel = req.body.resetPasswordUser;
+        if (!jwtUser) {
             throw new BadRequestException(HttpResponseStatusCodesConstants.BAD_REQUEST_FAILURE, "Cannot validate the token");
+        }
+        const user = await this.userRepository.findUserByUserName(jwtUser.username);
+        if (!user) {
+            throw new BadRequestException(HttpResponseStatusCodesConstants.BAD_REQUEST_FAILURE, "User not found");
         }
         const isPasswordSame = await this.isValidPassword(passwordResetReq.newPassword, user.password);
         if (isPasswordSame) {
