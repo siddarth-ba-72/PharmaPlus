@@ -3,6 +3,7 @@ import type { AuthDto } from "../shared/dto/AuthDto";
 import type { LoginRequestDto } from "../shared/dto/LoginRequestDto";
 import type { RegisterRequestDto } from "../shared/dto/RegisterRequestDto";
 import type { ResponseDataDto, ResponseDto } from "../shared/dto/ResponseDto";
+import type { UpdateUserRequestDto } from "../shared/dto/UpdateUserRequestDto";
 import { AbstractService } from "./AbstractService";
 
 export class AuthService extends AbstractService {
@@ -43,6 +44,16 @@ export class AuthService extends AbstractService {
         if (!response.success) {
             throw new Error(response.data.message ?? 'Logout failed')
         }
+    }
+
+    async updateUser(updateData: Partial<UpdateUserRequestDto>): Promise<ResponseDataDto<AuthDto>> {
+        const response = await this.put<ResponseDto<AuthDto>, Partial<UpdateUserRequestDto>>(ApiEndpoints.UPDATE_USER, updateData)
+
+        if (!response.success) {
+            throw new Error(response.data.message ?? 'Update user failed')
+        }
+
+        return response.data
     }
 
 }

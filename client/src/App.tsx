@@ -4,6 +4,7 @@ import './styles/App.css'
 import BaseComponent from './components/home/BaseComponent'
 import BannerContainer from './components/banner/BannerContainer'
 import AuthContainer from './components/auth/AuthContainer'
+import ProfileContainer from './components/profile/ProfileContainer'
 
 class PharmaPlusUIApp extends Component {
 
@@ -17,6 +18,7 @@ class PharmaPlusUIApp extends Component {
                         <Routes>
                             <Route path="/pharma-plus/home" element={<BaseComponent />} />
                             <Route path="/pharma-plus/login" element={<AuthContainer />} />
+                            <Route path="/pharma-plus/profile" element={<ProfileContainer />} />
                             <Route path="*" element={<Navigate to="/pharma-plus/home" replace />} />
                         </Routes>
                     </section>

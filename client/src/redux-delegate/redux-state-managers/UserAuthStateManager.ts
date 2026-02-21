@@ -1,7 +1,13 @@
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit'
 import { StateConstants } from '../redux-states/StateConstants'
 import { initialUserAuthState } from '../redux-states/initial-states/InitialUserAuthState'
-import { fetchUserProfileAction, loginUserAction, logoutUserAction, registerUserAction } from '../redux-actions/UserAuthActions'
+import {
+    fetchUserProfileAction,
+    loginUserAction,
+    logoutUserAction,
+    registerUserAction,
+    updateUserAction
+} from '../redux-actions/UserAuthActions'
 
 const userAuthStateManager = createSlice({
     name: StateConstants.USER_AUTH_STATE,
@@ -15,7 +21,7 @@ const userAuthStateManager = createSlice({
             }>,
         ) {
             const { field, value } = action.payload
-            ;(state as Record<string, string | number | boolean | null>)[field] = value
+                ; (state as Record<string, string | number | boolean | null>)[field] = value
         },
         clearUserAuthError(state) {
             state.error = null
@@ -38,6 +44,7 @@ const userAuthStateManager = createSlice({
                     state.lastName = action.payload.user.lastName
                     state.emailId = action.payload.user.emailId
                     state.age = action.payload.user.age
+                    state.isAdmin = action.payload.user.isAdmin
                     return
                 }
 
@@ -47,6 +54,7 @@ const userAuthStateManager = createSlice({
                 state.lastName = null
                 state.emailId = null
                 state.age = null
+                state.isAdmin = false
             })
             .addCase(fetchUserProfileAction.rejected, (state, action) => {
                 state.loading = false
@@ -56,6 +64,7 @@ const userAuthStateManager = createSlice({
                 state.lastName = null
                 state.emailId = null
                 state.age = null
+                state.isAdmin = false
                 state.error = action.error.message ?? 'Failed to load user profile.'
                 state.isInitialized = true
             })
@@ -74,10 +83,12 @@ const userAuthStateManager = createSlice({
                     state.lastName = action.payload.user.lastName
                     state.emailId = action.payload.user.emailId
                     state.age = action.payload.user.age
+                    state.isAdmin = action.payload.user.isAdmin
                     return
                 }
 
                 state.isAuthenticated = false
+                state.isAdmin = false
             })
             .addCase(loginUserAction.rejected, (state, action) => {
                 state.loading = false
@@ -98,14 +109,36 @@ const userAuthStateManager = createSlice({
                     state.lastName = action.payload.user.lastName
                     state.emailId = action.payload.user.emailId
                     state.age = action.payload.user.age
+                    state.isAdmin = action.payload.user.isAdmin
                     return
                 }
 
                 state.isAuthenticated = false
+                state.isAdmin = false
             })
             .addCase(registerUserAction.rejected, (state, action) => {
                 state.loading = false
                 state.error = action.error.message ?? 'Registration failed.'
+            })
+            .addCase(updateUserAction.pending, (state) => {
+                state.loading = true
+                state.error = null
+            })
+            .addCase(updateUserAction.fulfilled, (state, action) => {
+                state.loading = false
+
+                if (action.payload.user) {
+                    state.username = action.payload.user.username
+                    state.firstName = action.payload.user.firstName
+                    state.lastName = action.payload.user.lastName
+                    state.emailId = action.payload.user.emailId
+                    state.age = action.payload.user.age
+                    state.isAdmin = action.payload.user.isAdmin
+                }
+            })
+            .addCase(updateUserAction.rejected, (state, action) => {
+                state.loading = false
+                state.error = action.error.message ?? 'Update user failed.'
             })
             .addCase(logoutUserAction.fulfilled, (state) => {
                 state.isAuthenticated = false
@@ -114,6 +147,7 @@ const userAuthStateManager = createSlice({
                 state.lastName = null
                 state.emailId = null
                 state.age = null
+                state.isAdmin = false
                 state.loading = false
                 state.error = null
                 state.isInitialized = false

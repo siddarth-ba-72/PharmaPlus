@@ -7,4 +7,5 @@ export interface UserAuthState extends AbstractState {
     lastName: string | null
     emailId: string | null
     age: number | null
+    isAdmin: boolean
 }

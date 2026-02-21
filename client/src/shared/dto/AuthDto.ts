@@ -5,5 +5,6 @@ export interface AuthDto {
         lastName: string
         emailId: string
         age: number
+        isAdmin: boolean
     }
 }

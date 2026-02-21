@@ -4,7 +4,7 @@ import type { BannerComponentProps } from '../../component-models/props/PropMode
 
 class BannerComponent extends Component<BannerComponentProps> {
     render() {
-        const { isAuthenticated, firstName, isDropdownOpen, onUserNameClick, onLogoutClick } = this.props
+        const { isAuthenticated, firstName, isDropdownOpen, onUserNameClick, onProfileClick, onLogoutClick } = this.props
 
         return (
             <header className="banner">
@@ -16,6 +16,9 @@ class BannerComponent extends Component<BannerComponentProps> {
                         </button>
                         {isDropdownOpen && (
                             <div className="banner-dropdown">
+                                <button type="button" className="banner-dropdown-item" onClick={onProfileClick}>
+                                    Profile
+                                </button>
                                 <button type="button" className="banner-dropdown-item" onClick={onLogoutClick}>
                                     Logout
                                 </button>

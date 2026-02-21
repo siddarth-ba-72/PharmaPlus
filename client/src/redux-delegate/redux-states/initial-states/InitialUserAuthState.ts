@@ -10,4 +10,5 @@ export const initialUserAuthState: UserAuthState = {
     loading: false,
     error: null,
     isInitialized: false,
+    isAdmin: false,
 }

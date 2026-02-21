@@ -24,6 +24,7 @@ class BannerContainer extends Component<BannerContainerProps, BannerContainerSta
         this.state = {
             isDropdownOpen: false,
             redirectToHome: false,
+            redirectToProfile: false,
         }
     }
 
@@ -40,9 +41,18 @@ class BannerContainer extends Component<BannerContainerProps, BannerContainerSta
         }
     }
 
+    private handleProfileClick = (): void => {
+        this.setState({ isDropdownOpen: false, redirectToProfile: true })
+    }
+
     componentDidUpdate(_: BannerContainerProps, prevState: BannerContainerState): void {
         if (!prevState.redirectToHome && this.state.redirectToHome) {
             this.setState({ redirectToHome: false })
+            return
+        }
+
+        if (!prevState.redirectToProfile && this.state.redirectToProfile) {
+            this.setState({ redirectToProfile: false })
         }
     }
 
@@ -52,12 +62,14 @@ class BannerContainer extends Component<BannerContainerProps, BannerContainerSta
             firstName: this.props.firstName,
             isDropdownOpen: this.state.isDropdownOpen,
             onUserNameClick: this.toggleDropdown,
+            onProfileClick: this.handleProfileClick,
             onLogoutClick: this.handleLogout,
         }
 
         return (
             <>
                 {this.state.redirectToHome && <Navigate to="/pharma-plus/home" replace />}
+                {this.state.redirectToProfile && <Navigate to="/pharma-plus/profile" replace />}
                 <BannerComponent {...bannerProps} />
             </>
         )

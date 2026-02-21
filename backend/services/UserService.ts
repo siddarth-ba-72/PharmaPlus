@@ -90,12 +90,20 @@ export class UserService {
         res.clearCookie("auth_token");
     }
 
-    public async updateUserDetails(userRequest: UserRequestModel): Promise<UserResponseModel> {
-        const user = await this.userRepository.findUserByEmailId(userRequest.emailId);
+    public async updateUserDetails(userRequest: UserRequestModel, currentUser: UserResponseModel, res: Response): Promise<UserResponseModel> {
+        const userName: string = currentUser.username;
+        const user = await this.userRepository.findUserByUserName(userName);
         if (!user) {
             throw new ResourceNotFoundException(HttpResponseStatusCodesConstants.BAD_REQUEST_FAILURE, "User not found");
         }
         const updatedUser = await this.userRepository.updateUserDetails(user, userRequest);
+        const refreshedToken = await JwtAuthentication.generateToken(updatedUser);
+        res.cookie("auth_token", refreshedToken, {
+            httpOnly: true,
+            secure: false,
+            maxAge: 3600000,
+            sameSite: "strict",
+        });
         return await this.userMapper.mapToUserResponse(updatedUser);
     }
 

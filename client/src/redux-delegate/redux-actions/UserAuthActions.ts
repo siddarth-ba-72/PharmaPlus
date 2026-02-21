@@ -6,6 +6,7 @@ import type { LoginRequestDto } from '../../shared/dto/LoginRequestDto'
 import type { RegisterRequestDto } from '../../shared/dto/RegisterRequestDto'
 import type { ResponseDataDto } from '../../shared/dto/ResponseDto'
 import { StateConstants } from '../redux-states/StateConstants'
+import type { UpdateUserRequestDto } from '../../shared/dto/UpdateUserRequestDto'
 
 const authService = new AuthService()
 
@@ -20,9 +21,14 @@ export const fetchUserProfileAction = createAsyncThunk<ResponseDataDto<AuthDto>,
                 return true
             }
 
-            const state = getState()
+            const state = getState() as RootState
             const userAuth = state.userAuth
-            return !(userAuth.loading || userAuth.isInitialized)
+
+            if (userAuth.loading) {
+                return false
+            }
+
+            return !userAuth.isAuthenticated
         },
     },
 )
@@ -45,5 +51,13 @@ export const logoutUserAction = createAsyncThunk<void, void>(
     `${StateConstants.USER_AUTH_STATE}/logoutUser`,
     async () => {
         await authService.logoutUser()
+    },
+)
+
+export const updateUserAction = createAsyncThunk<ResponseDataDto<AuthDto>, Partial<UpdateUserRequestDto>>(
+    `${StateConstants.USER_AUTH_STATE}/updateUser`,
+    async (updateData) => {
+        await authService.updateUser(updateData)
+        return await authService.getUserProfile()
     },
 )

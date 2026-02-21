@@ -122,7 +122,7 @@ export class UserController extends AbstractController {
 	*/
 	public updateUserDetails = AsyncRequestHandler.handleRequest(async (req: Request, res: Response): Promise<void> => {
 		const userReq = req.body as UserRequestModel;
-		const updatedUser = await this.userService.updateUserDetails(userReq);
+		const updatedUser = await this.userService.updateUserDetails(userReq, req.body.user, res);
 		this.logger.logInfo("User details updated successfully")
 		return this.httpResponse.sendHttpResponse(
 			res, HttpResponseStatusCodesConstants.CREATED_SUCCESS, {
