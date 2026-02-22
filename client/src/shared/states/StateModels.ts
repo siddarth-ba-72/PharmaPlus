@@ -1,3 +1,5 @@
+import type { JSX } from "react/jsx-runtime"
+
 export interface BannerContainerState {
     isDropdownOpen: boolean
     redirectToHome: boolean
@@ -5,6 +7,11 @@ export interface BannerContainerState {
 }
 
 export type AuthMode = 'login' | 'register'
+
+export interface AuthorizationState {
+    RequiredAuthComponent: JSX.Element | null
+    RequiredAdminAuthComponent: JSX.Element | null
+}
 
 export interface AuthContainerState {
     mode: AuthMode
