@@ -1,3 +1,4 @@
+import axios from 'axios'
 import { ApiEndpoints } from "../shared/api/ApiEndpoints";
 import type { AuthDto } from "../shared/dto/AuthDto";
 import type { LoginRequestDto } from "../shared/dto/LoginRequestDto";
@@ -7,53 +8,106 @@ import type { UpdateUserRequestDto } from "../shared/dto/UpdateUserRequestDto";
 import { AbstractService } from "./AbstractService";
 
 export class AuthService extends AbstractService {
+    private getBackendErrorMessage(error: unknown, fallbackMessage: string): string {
+        if (axios.isAxiosError(error)) {
+            const responseData = error.response?.data as
+                | {
+                    message?: string
+                    error?: string | { message?: string }
+                    data?: { message?: string }
+                }
+                | undefined
 
-    async getUserProfile(): Promise<ResponseDataDto<AuthDto>> {
-        const response = await this.get<ResponseDto<AuthDto>>(ApiEndpoints.CURRENT_USER)
+            if (typeof responseData?.error === 'object' && responseData.error?.message) {
+                return responseData.error.message
+            }
 
-        if (!response.success) {
-            throw new Error(response.data.message ?? 'Could not fetch user profile!')
+            if (typeof responseData?.error === 'string') {
+                return responseData.error
+            }
+
+            if (responseData?.data?.message) {
+                return responseData.data.message
+            }
+
+            if (responseData?.message) {
+                return responseData.message
+            }
         }
 
-        return response.data
+        if (error instanceof Error) {
+            return error.message
+        }
+
+        return fallbackMessage
+    }
+
+    async getUserProfile(): Promise<ResponseDataDto<AuthDto>> {
+        try {
+            const response = await this.get<ResponseDto<AuthDto>>(ApiEndpoints.CURRENT_USER)
+
+            if (!response.success) {
+                throw new Error(response.data.message ?? 'Could not fetch user profile!')
+            }
+
+            return response.data
+        } catch (error) {
+            throw new Error(this.getBackendErrorMessage(error, 'Could not fetch user profile!'))
+        }
     }
 
     async loginUser(loginRequest: LoginRequestDto): Promise<ResponseDataDto<AuthDto>> {
-        const response = await this.post<ResponseDto<AuthDto>, LoginRequestDto>(ApiEndpoints.LOGIN, loginRequest)
+        try {
+            const response = await this.post<ResponseDto<AuthDto>, LoginRequestDto>(ApiEndpoints.LOGIN, loginRequest)
 
-        if (!response.success) {
-            throw new Error(response.data.message ?? 'Login failed')
+            if (!response.success) {
+                throw new Error(response.data.message ?? 'Login failed')
+            }
+
+            return response.data
+        } catch (error) {
+            throw new Error(this.getBackendErrorMessage(error, 'Login failed'))
         }
-
-        return response.data
     }
 
     async registerUser(registerRequest: RegisterRequestDto): Promise<ResponseDataDto<AuthDto>> {
-        const response = await this.post<ResponseDto<AuthDto>, RegisterRequestDto>(ApiEndpoints.REGISTER, registerRequest)
+        try {
+            const response = await this.post<ResponseDto<AuthDto>, RegisterRequestDto>(ApiEndpoints.REGISTER, registerRequest)
 
-        if (!response.success) {
-            throw new Error(response.data.message ?? 'Registration failed')
+            if (!response.success) {
+                throw new Error(response.data.message ?? 'Registration failed')
+            }
+
+            return response.data
+        } catch (error) {
+            throw new Error(this.getBackendErrorMessage(error, 'Registration failed'))
         }
-
-        return response.data
     }
 
     async logoutUser(): Promise<void> {
-        const response = await this.get<ResponseDto<Record<string, never>>>(ApiEndpoints.LOGOUT)
+        try {
+            const response = await this.get<ResponseDto<Record<string, never>>>(ApiEndpoints.LOGOUT)
 
-        if (!response.success) {
-            throw new Error(response.data.message ?? 'Logout failed')
+            if (!response.success) {
+                throw new Error(response.data.message ?? 'Logout failed')
+            }
+        } catch (error) {
+            throw new Error(this.getBackendErrorMessage(error, 'Logout failed'))
         }
     }
 
     async updateUser(updateData: Partial<UpdateUserRequestDto>): Promise<ResponseDataDto<AuthDto>> {
-        const response = await this.put<ResponseDto<AuthDto>, Partial<UpdateUserRequestDto>>(ApiEndpoints.UPDATE_USER, updateData)
+        try {
+            const response = await this.put<ResponseDto<AuthDto>, Partial<UpdateUserRequestDto>>(ApiEndpoints.UPDATE_USER, updateData)
 
-        if (!response.success) {
-            throw new Error(response.data.message ?? 'Update user failed')
+            if (!response.success) {
+                throw new Error(response.data.message ?? 'Update user failed')
+            }
+
+            return response.data
+        } catch (error) {
+            throw new Error(this.getBackendErrorMessage(error, 'Update user failed'))
         }
-
-        return response.data
     }
 
 }
