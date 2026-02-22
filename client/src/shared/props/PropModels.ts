@@ -45,7 +45,6 @@ export interface AuthComponentProps {
     emailId: string
     age: string
     submitting: boolean
-    error: string | null
     onInputChange: (event: ChangeEvent<HTMLInputElement>) => void
     onToggleMode: () => void
     onLoginSubmit: (event: FormEvent<HTMLFormElement>) => void

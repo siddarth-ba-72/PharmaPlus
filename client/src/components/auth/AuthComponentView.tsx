@@ -10,7 +10,6 @@ export const AuthComponentView = (props: AuthComponentProps) => {
         emailId,
         age,
         submitting,
-        error,
         onInputChange,
         onToggleMode,
         onLoginSubmit,
@@ -26,7 +25,6 @@ export const AuthComponentView = (props: AuthComponentProps) => {
                         Username cannot be changed after registration.
                     </p>
                 )}
-                {error && <p className="error-text">{error}</p>}
 
                 {mode === 'login' ? (
                     <form className="auth-form" onSubmit={onLoginSubmit}>

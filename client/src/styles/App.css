@@ -212,3 +212,59 @@ button:hover {
   gap: 0.7rem;
   justify-content: flex-end;
 }
+
+.toast {
+  position: fixed;
+  top: 1rem;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1000;
+  min-width: 320px;
+  max-width: 90vw;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  border-radius: 0.65rem;
+  border: 1px solid;
+  padding: 0.7rem 0.8rem;
+  box-shadow: 0 10px 22px rgba(15, 23, 42, 0.2);
+}
+
+.toast-success {
+  background: #ecfdf5;
+  border-color: #10b981;
+  color: #065f46;
+}
+
+.toast-warn {
+  background: #fffbeb;
+  border-color: #f59e0b;
+  color: #92400e;
+}
+
+.toast-fail {
+  background: #fef2f2;
+  border-color: #ef4444;
+  color: #991b1b;
+}
+
+.toast-message {
+  margin: 0;
+  flex: 1;
+  text-align: left;
+  font-weight: 600;
+}
+
+.toast-close-btn {
+  margin: 0;
+  border-radius: 0.45rem;
+  border: 1px solid currentColor;
+  background: transparent;
+  color: inherit;
+  font-size: 0.85rem;
+  padding: 0.35rem 0.55rem;
+}
+
+.toast-close-btn:hover {
+  background: rgba(0, 0, 0, 0.06);
+}

@@ -4,6 +4,7 @@ import { BannerComponent } from "../components/banner/BannerComponent";
 import { CounterComponent } from "../components/counter/CounterComponent";
 import { AuthComponent } from "../components/auth/AuthComponent";
 import { ProfileComponent } from "../components/profile/ProfileComponent";
+import { ToastComponent } from "../components/toast/ToastComponent";
 
 export const PharmaPlusAppComponentView = (props: AuthorizationState) => {
 
@@ -12,6 +13,7 @@ export const PharmaPlusAppComponentView = (props: AuthorizationState) => {
     return (
         <BrowserRouter>
             <div className="app">
+                <ToastComponent />
                 <BannerComponent />
                 <section className="app-content">
                     <Routes>

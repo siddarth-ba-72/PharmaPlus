@@ -5,13 +5,13 @@ import { useAuthStore } from '../../store/AuthStore'
 import { useLoginMutation, useRegisterMutation, useUserProfileQuery } from '../../shared/queries/AuthQueries'
 import type { AuthMode } from '../../shared/states/StateModels'
 import type { AuthComponentProps } from '../../shared/props/PropModels'
+import { useToastStore } from '../../store/ToastStore'
 
 export const AuthComponent = () => {
 
     const navigate = useNavigate()
     const [mode, setMode] = useState<AuthMode>('login')
     const [password, setPassword] = useState('')
-    const [error, setError] = useState<string | null>(null)
     const username = useAuthStore((state) => state.authForm.username)
     const firstName = useAuthStore((state) => state.authForm.firstName)
     const lastName = useAuthStore((state) => state.authForm.lastName)
@@ -19,6 +19,7 @@ export const AuthComponent = () => {
     const age = useAuthStore((state) => state.authForm.age)
     const setAuthField = useAuthStore((state) => state.setAuthField)
     const isAuthenticated = useAuthStore((state) => state.isAuthenticated)
+    const showToast = useToastStore((state) => state.showToast)
 
     useUserProfileQuery()
     const loginMutation = useLoginMutation()
@@ -54,20 +55,25 @@ export const AuthComponent = () => {
 
     const toggleMode = (): void => {
         setMode((currentMode) => (currentMode === 'login' ? 'register' : 'login'))
-        setError(null)
     }
 
     const submitLogin = async (event: FormEvent<HTMLFormElement>): Promise<void> => {
         event.preventDefault()
         const userName = username ?? ''
 
-        setError(null)
         try {
-            await loginMutation.mutateAsync({ userName, password })
+            const response = await loginMutation.mutateAsync({ userName, password })
+            showToast({
+                category: 'success',
+                message: response.message ?? `Welcome back, ${userName}!`,
+            })
             navigate('/pharma-plus/home', { replace: true })
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : 'Login failed'
-            setError(errorMessage)
+            showToast({
+                category: 'fail',
+                message: errorMessage,
+            })
         }
     }
 
@@ -79,9 +85,8 @@ export const AuthComponent = () => {
         const emailIdValue = emailId ?? ''
         const ageValue = age ?? 0
 
-        setError(null)
         try {
-            await registerMutation.mutateAsync({
+            const response = await registerMutation.mutateAsync({
                 userName,
                 firstName: firstNameValue,
                 lastName: lastNameValue,
@@ -89,10 +94,17 @@ export const AuthComponent = () => {
                 password,
                 age: ageValue,
             })
+            showToast({
+                category: 'success',
+                message: response.message ?? `Registration successful for ${userName}.`,
+            })
             navigate('/pharma-plus/home', { replace: true })
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : 'Registration failed'
-            setError(errorMessage)
+            showToast({
+                category: 'fail',
+                message: errorMessage,
+            })
         }
     }
 
@@ -109,7 +121,6 @@ export const AuthComponent = () => {
         emailId: emailId ?? '',
         age: age === null ? '' : age.toString(),
         submitting,
-        error,
         onInputChange: handleInputChange,
         onToggleMode: toggleMode,
         onLoginSubmit: submitLogin,
