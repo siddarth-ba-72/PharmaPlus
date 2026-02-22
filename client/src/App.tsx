@@ -1,31 +1,24 @@
-import { Component } from 'react'
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
+import { BannerComponent } from './components/banner/BannerComponent'
+import { AuthComponent } from './components/auth/AuthComponent'
+import { ProfileComponent } from './components/profile/ProfileComponent'
+import { CounterComponent } from './components/counter/CounterComponent'
+
 import './styles/App.css'
-import BaseComponent from './components/home/BaseComponent'
-import BannerContainer from './components/banner/BannerContainer'
-import AuthContainer from './components/auth/AuthContainer'
-import ProfileContainer from './components/profile/ProfileContainer'
 
-class PharmaPlusUIApp extends Component {
+export const PharmaPlusUIApp = () => {
 
-    render() {
-
-        return (
-            <BrowserRouter>
-                <main className="app">
-                    <BannerContainer />
-                    <section className="app-content">
-                        <Routes>
-                            <Route path="/pharma-plus/home" element={<BaseComponent />} />
-                            <Route path="/pharma-plus/login" element={<AuthContainer />} />
-                            <Route path="/pharma-plus/profile" element={<ProfileContainer />} />
-                            <Route path="*" element={<Navigate to="/pharma-plus/home" replace />} />
-                        </Routes>
-                    </section>
-                </main>
-            </BrowserRouter>
-        )
-    }
+    return (
+        <BrowserRouter>
+            <BannerComponent />
+            <section className="app-content">
+                <Routes>
+                    <Route path="/pharma-plus/home" element={<CounterComponent />} />
+                    <Route path="/pharma-plus/login" element={<AuthComponent />} />
+                    <Route path="/pharma-plus/profile" element={<ProfileComponent />} />
+                    <Route path="*" element={<Navigate to="/pharma-plus/home" replace />} />
+                </Routes>
+            </section>
+        </BrowserRouter>
+    )
 }
-
-export default PharmaPlusUIApp

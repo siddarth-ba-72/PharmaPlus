@@ -1,111 +1,122 @@
-import { Component, type ChangeEvent, type FormEvent } from 'react'
+import { useState, type ChangeEvent, type FormEvent } from 'react'
+import { Navigate, useNavigate } from 'react-router-dom'
+import { AuthComponentView } from './AuthComponentView'
+import { useAuthStore } from '../../store/AuthStore'
+import { useLoginMutation, useRegisterMutation, useUserProfileQuery } from '../../shared/queries/AuthQueries'
+import type { AuthMode } from '../../shared/states/StateModels'
+import type { AuthComponentProps } from '../../shared/props/PropModels'
 
-type AuthMode = 'login' | 'register'
+export const AuthComponent = () => {
 
-type AuthComponentProps = {
-    mode: AuthMode
-    userName: string
-    password: string
-    firstName: string
-    lastName: string
-    emailId: string
-    age: string
-    submitting: boolean
-    error: string | null
-    onInputChange: (event: ChangeEvent<HTMLInputElement>) => void
-    onToggleMode: () => void
-    onLoginSubmit: (event: FormEvent<HTMLFormElement>) => void
-    onRegisterSubmit: (event: FormEvent<HTMLFormElement>) => void
-}
+    const navigate = useNavigate()
+    const [mode, setMode] = useState<AuthMode>('login')
+    const [password, setPassword] = useState('')
+    const [error, setError] = useState<string | null>(null)
+    const username = useAuthStore((state) => state.authForm.username)
+    const firstName = useAuthStore((state) => state.authForm.firstName)
+    const lastName = useAuthStore((state) => state.authForm.lastName)
+    const emailId = useAuthStore((state) => state.authForm.emailId)
+    const age = useAuthStore((state) => state.authForm.age)
+    const setAuthField = useAuthStore((state) => state.setAuthField)
+    const isAuthenticated = useAuthStore((state) => state.isAuthenticated)
 
-class AuthComponent extends Component<AuthComponentProps> {
-    render() {
-        const {
-            mode,
-            userName,
-            password,
-            firstName,
-            lastName,
-            emailId,
-            age,
-            submitting,
-            error,
-            onInputChange,
-            onToggleMode,
-            onLoginSubmit,
-            onRegisterSubmit,
-        } = this.props
+    useUserProfileQuery()
+    const loginMutation = useLoginMutation()
+    const registerMutation = useRegisterMutation()
+    const submitting = loginMutation.isPending || registerMutation.isPending
 
-        return (
-            <section className="auth-wrapper">
-                <div className="auth-card">
-                    <h2>{mode === 'login' ? 'Login' : 'Register'}</h2>
-                    {mode === 'register' && (
-                        <p className="auth-warning">
-                            Username cannot be changed after registration.
-                        </p>
-                    )}
-                    {error && <p className="error-text">{error}</p>}
+    const handleInputChange = (event: ChangeEvent<HTMLInputElement>): void => {
+        const { name, value } = event.target
 
-                    {mode === 'login' ? (
-                        <form className="auth-form" onSubmit={onLoginSubmit}>
-                            <label htmlFor="userName">Username</label>
-                            <input id="userName" name="userName" value={userName} onChange={onInputChange} required />
-
-                            <label htmlFor="password">Password</label>
-                            <input
-                                id="password"
-                                name="password"
-                                type="password"
-                                value={password}
-                                onChange={onInputChange}
-                                required
-                            />
-
-                            <button type="submit" disabled={submitting}>
-                                {submitting ? 'Submitting...' : 'Submit'}
-                            </button>
-                        </form>
-                    ) : (
-                        <form className="auth-form" onSubmit={onRegisterSubmit}>
-                            <label htmlFor="userName">Username</label>
-                            <input id="userName" name="userName" value={userName} onChange={onInputChange} required />
-
-                            <label htmlFor="firstName">First Name</label>
-                            <input id="firstName" name="firstName" value={firstName} onChange={onInputChange} required />
-
-                            <label htmlFor="lastName">Last Name</label>
-                            <input id="lastName" name="lastName" value={lastName} onChange={onInputChange} required />
-
-                            <label htmlFor="emailId">Email Id</label>
-                            <input id="emailId" name="emailId" type="email" value={emailId} onChange={onInputChange} required />
-
-                            <label htmlFor="password">Password</label>
-                            <input
-                                id="password"
-                                name="password"
-                                type="password"
-                                value={password}
-                                onChange={onInputChange}
-                                required
-                            />
-
-                            <label htmlFor="age">Age</label>
-                            <input id="age" name="age" type="number" value={age} onChange={onInputChange} required />
-
-                            <button type="submit" disabled={submitting}>
-                                {submitting ? 'Submitting...' : 'Submit'}
-                            </button>
-                        </form>
-                    )}
-
-                    <button type="button" className="auth-toggle-btn" onClick={onToggleMode}>
-                        {mode === 'login' ? 'Switch to Register' : 'Switch to Login'}
-                    </button>
-                </div>
-            </section>
-        )
+        switch (name) {
+            case 'userName':
+                setAuthField('username', value)
+                break
+            case 'password':
+                setPassword(value)
+                break
+            case 'firstName':
+                setAuthField('firstName', value)
+                break
+            case 'lastName':
+                setAuthField('lastName', value)
+                break
+            case 'emailId':
+                setAuthField('emailId', value)
+                break
+            case 'age':
+                setAuthField('age', value === '' ? null : Number(value))
+                break
+            default:
+                break
+        }
     }
-}
 
-export default AuthComponent
+    const toggleMode = (): void => {
+        setMode((currentMode) => (currentMode === 'login' ? 'register' : 'login'))
+        setError(null)
+    }
+
+    const submitLogin = async (event: FormEvent<HTMLFormElement>): Promise<void> => {
+        event.preventDefault()
+        const userName = username ?? ''
+
+        setError(null)
+        try {
+            await loginMutation.mutateAsync({ userName, password })
+            navigate('/pharma-plus/home', { replace: true })
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : 'Login failed'
+            setError(errorMessage)
+        }
+    }
+
+    const submitRegister = async (event: FormEvent<HTMLFormElement>): Promise<void> => {
+        event.preventDefault()
+        const userName = username ?? ''
+        const firstNameValue = firstName ?? ''
+        const lastNameValue = lastName ?? ''
+        const emailIdValue = emailId ?? ''
+        const ageValue = age ?? 0
+
+        setError(null)
+        try {
+            await registerMutation.mutateAsync({
+                userName,
+                firstName: firstNameValue,
+                lastName: lastNameValue,
+                emailId: emailIdValue,
+                password,
+                age: ageValue,
+            })
+            navigate('/pharma-plus/home', { replace: true })
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : 'Registration failed'
+            setError(errorMessage)
+        }
+    }
+
+    if (isAuthenticated) {
+        return <Navigate to="/pharma-plus/home" replace />
+    }
+
+    const authComponentProps: AuthComponentProps = {
+        mode,
+        userName: username ?? '',
+        password,
+        firstName: firstName ?? '',
+        lastName: lastName ?? '',
+        emailId: emailId ?? '',
+        age: age === null ? '' : age.toString(),
+        submitting,
+        error,
+        onInputChange: handleInputChange,
+        onToggleMode: toggleMode,
+        onLoginSubmit: submitLogin,
+        onRegisterSubmit: submitRegister,
+    }
+
+    return (
+        <AuthComponentView {...authComponentProps} />
+    )
+}

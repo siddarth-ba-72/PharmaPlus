@@ -1,4 +1,4 @@
-import { ApiEndpoints } from "../shared/ApiEndpoints";
+import { ApiEndpoints } from "../shared/api/ApiEndpoints";
 import type { AuthDto } from "../shared/dto/AuthDto";
 import type { LoginRequestDto } from "../shared/dto/LoginRequestDto";
 import type { RegisterRequestDto } from "../shared/dto/RegisterRequestDto";

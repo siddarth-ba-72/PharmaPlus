@@ -1,6 +1,6 @@
 import type { CounterDto } from '../shared/dto/CounterDto'
 import type { ResponseDto } from '../shared/dto/ResponseDto'
-import { ApiEndpoints } from '../shared/ApiEndpoints'
+import { ApiEndpoints } from '../shared/api/ApiEndpoints'
 import { AbstractService } from './AbstractService'
 
 export class CounterService extends AbstractService {

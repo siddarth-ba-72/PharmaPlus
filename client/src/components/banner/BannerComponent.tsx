@@ -1,38 +1,47 @@
-import { Component } from 'react'
-import { Link } from 'react-router-dom'
-import type { BannerComponentProps } from '../../component-models/props/PropModels'
+import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { BannerComponentView } from './BannerComponentView'
+import type { BannerComponentProps } from '../../shared/props/PropModels'
+import { useAuthStore } from '../../store/AuthStore'
+import { useLogoutMutation, useUserProfileQuery } from '../../shared/queries/AuthQueries'
 
-class BannerComponent extends Component<BannerComponentProps> {
-    render() {
-        const { isAuthenticated, firstName, isDropdownOpen, onUserNameClick, onProfileClick, onLogoutClick } = this.props
+export const BannerComponent = () => {
 
-        return (
-            <header className="banner">
-                <h1 className="banner-title">PharmaPlus</h1>
-                {isAuthenticated ? (
-                    <div className="banner-user-menu">
-                        <button type="button" className="banner-user-btn" onClick={onUserNameClick}>
-                            {firstName ?? 'User'}
-                        </button>
-                        {isDropdownOpen && (
-                            <div className="banner-dropdown">
-                                <button type="button" className="banner-dropdown-item" onClick={onProfileClick}>
-                                    Profile
-                                </button>
-                                <button type="button" className="banner-dropdown-item" onClick={onLogoutClick}>
-                                    Logout
-                                </button>
-                            </div>
-                        )}
-                    </div>
-                ) : (
-                    <Link to="/pharma-plus/login" className="banner-login-btn">
-                        Login
-                    </Link>
-                )}
-            </header>
-        )
+    const navigate = useNavigate()
+    const [isDropdownOpen, setIsDropdownOpen] = useState(false)
+    const isAuthenticated = useAuthStore((state) => state.isAuthenticated)
+    const firstName = useAuthStore((state) => state.user?.firstName ?? null)
+    const { mutateAsync: logoutUser } = useLogoutMutation()
+
+    useUserProfileQuery()
+
+    const toggleDropdown = (): void => {
+        setIsDropdownOpen((isOpen) => !isOpen)
     }
-}
 
-export default BannerComponent
+    const handleLogout = async (): Promise<void> => {
+        try {
+            await logoutUser()
+            setIsDropdownOpen(false)
+            navigate('/pharma-plus/home', { replace: true })
+        } catch {
+            setIsDropdownOpen(false)
+        }
+    }
+
+    const handleProfileClick = (): void => {
+        setIsDropdownOpen(false)
+        navigate('/pharma-plus/profile', { replace: true })
+    }
+
+    const bannerProps: BannerComponentProps = {
+        isAuthenticated,
+        firstName,
+        isDropdownOpen,
+        onUserNameClick: toggleDropdown,
+        onProfileClick: handleProfileClick,
+        onLogoutClick: handleLogout,
+    }
+
+    return <BannerComponentView {...bannerProps} />
+}

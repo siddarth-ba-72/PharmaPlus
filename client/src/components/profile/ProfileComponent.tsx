@@ -1,76 +1,115 @@
-import { Component } from 'react'
-import type { ProfileComponentProps } from '../../component-models/props/PropModels'
+import { useEffect, useState, type ChangeEvent, type FormEvent } from 'react'
+import { ProfileComponentView } from './ProfileComponentView'
+import { useAuthStore } from '../../store/AuthStore'
+import { useUpdateUserMutation, useUserProfileQuery } from '../../shared/queries/AuthQueries'
+import type { ProfileComponentProps } from '../../shared/props/PropModels';
 
-class ProfileComponent extends Component<ProfileComponentProps> {
-    render() {
-        const {
-            username,
-            firstName,
-            lastName,
-            emailId,
-            age,
-            isEditing,
-            submitting,
-            error,
-            onEditClick,
-            onCancelEdit,
-            onInputChange,
-            onSubmit,
-        } = this.props
+export const ProfileComponent = () => {
 
+    const [isEditing, setIsEditing] = useState(false)
+    const [localFirstName, setLocalFirstName] = useState('')
+    const [localLastName, setLocalLastName] = useState('')
+    const [localEmailId, setLocalEmailId] = useState('')
+    const [localAge, setLocalAge] = useState('')
+    const [localError, setLocalError] = useState<string | null>(null)
+    const user = useAuthStore((state) => state.user)
+    const userProfileQuery = useUserProfileQuery()
+    const updateUserMutation = useUpdateUserMutation()
+    const submitting = updateUserMutation.isPending
+
+    useEffect(() => {
         if (!isEditing) {
-            return (
-                <section className="profile-wrapper">
-                    <div className="profile-card">
-                        <h2>Profile</h2>
-                        {error && <p className="error-text">{error}</p>}
-                        <p><strong>Username:</strong> {username}</p>
-                        <p><strong>First Name:</strong> {firstName}</p>
-                        <p><strong>Last Name:</strong> {lastName}</p>
-                        <p><strong>Email Id:</strong> {emailId}</p>
-                        <p><strong>Age:</strong> {age}</p>
-                        <button type="button" onClick={onEditClick}>
-                            Edit Details
-                        </button>
-                    </div>
-                </section>
-            )
+            return
         }
 
-        return (
-            <section className="profile-wrapper">
-                <div className="profile-card">
-                    <h2>Edit Profile</h2>
-                    {error && <p className="error-text">{error}</p>}
-                    <form className="profile-form" onSubmit={onSubmit}>
-                        <label htmlFor="username">Username</label>
-                        <input id="username" name="username" value={username} disabled />
+        setLocalFirstName(user?.firstName ?? '')
+        setLocalLastName(user?.lastName ?? '')
+        setLocalEmailId(user?.emailId ?? '')
+        setLocalAge(user ? user.age.toString() : '')
+    }, [isEditing, user])
 
-                        <label htmlFor="firstName">First Name</label>
-                        <input id="firstName" name="firstName" value={firstName} onChange={onInputChange} required />
-
-                        <label htmlFor="lastName">Last Name</label>
-                        <input id="lastName" name="lastName" value={lastName} onChange={onInputChange} required />
-
-                        <label htmlFor="emailId">Email Id</label>
-                        <input id="emailId" name="emailId" type="email" value={emailId} onChange={onInputChange} required />
-
-                        <label htmlFor="age">Age</label>
-                        <input id="age" name="age" type="number" value={age} onChange={onInputChange} required />
-
-                        <div className="profile-actions">
-                            <button type="button" onClick={onCancelEdit}>
-                                Cancel
-                            </button>
-                            <button type="submit" disabled={submitting}>
-                                {submitting ? 'Saving...' : 'Submit'}
-                            </button>
-                        </div>
-                    </form>
-                </div>
-            </section>
-        )
+    const enterEditMode = (): void => {
+        setLocalFirstName(user?.firstName ?? '')
+        setLocalLastName(user?.lastName ?? '')
+        setLocalEmailId(user?.emailId ?? '')
+        setLocalAge(user ? user.age.toString() : '')
+        setLocalError(null)
+        setIsEditing(true)
     }
-}
 
-export default ProfileComponent
+    const cancelEditMode = (): void => {
+        setIsEditing(false)
+        setLocalError(null)
+    }
+
+    const handleInputChange = (event: ChangeEvent<HTMLInputElement>): void => {
+        const { name, value } = event.target
+
+        switch (name) {
+            case 'firstName':
+                setLocalFirstName(value)
+                break
+            case 'lastName':
+                setLocalLastName(value)
+                break
+            case 'age':
+                setLocalAge(value)
+                break
+            case 'emailId':
+                setLocalEmailId(value)
+                break
+            default:
+                break
+        }
+    }
+
+    const handleSubmit = async (event: FormEvent<HTMLFormElement>): Promise<void> => {
+        event.preventDefault()
+
+        const emailId = localEmailId
+        if (!emailId) {
+            setLocalError('Email is missing for update operation.')
+            return
+        }
+
+        setLocalError(null)
+        try {
+            await updateUserMutation.mutateAsync({
+                firstName: localFirstName,
+                lastName: localLastName,
+                emailId,
+                age: Number(localAge),
+            })
+            setIsEditing(false)
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : 'Update failed'
+            setLocalError(errorMessage)
+        }
+    }
+
+    const username = user?.username ?? ''
+    const firstName = isEditing ? localFirstName : (user?.firstName ?? '')
+    const lastName = isEditing ? localLastName : (user?.lastName ?? '')
+    const emailId = isEditing ? localEmailId : (user?.emailId ?? '')
+    const age = isEditing ? localAge : (user ? user.age.toString() : '')
+    const error = localError ?? (userProfileQuery.error instanceof Error ? userProfileQuery.error.message : null)
+
+    const profileComponentProps: ProfileComponentProps = {
+        username,
+        firstName,
+        lastName,
+        emailId,
+        age,
+        isEditing,
+        submitting,
+        error,
+        onEditClick: enterEditMode,
+        onCancelEdit: cancelEditMode,
+        onInputChange: handleInputChange,
+        onSubmit: handleSubmit,
+    }
+
+    return (
+        <ProfileComponentView {...profileComponentProps} />
+    )
+};
