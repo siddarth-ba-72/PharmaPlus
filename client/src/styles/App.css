@@ -49,6 +49,28 @@ button:hover {
   font-size: 1.1rem;
 }
 
+.banner-nav {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+}
+
+.banner-nav-link {
+  margin: 0;
+  padding: 0.45rem 0.75rem;
+  border-radius: 0.5rem;
+  border: 1px solid #d1d5db;
+  background: #ffffff;
+  color: #111827;
+  text-decoration: none;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.banner-nav-link:hover {
+  background: #f3f4f6;
+}
+
 .banner-login-btn {
   margin: 0;
   padding: 0.6rem 1rem;

@@ -2,7 +2,7 @@ import type { ChangeEvent, FormEvent } from 'react'
 import type { LoginRequestDto } from '../dto/LoginRequestDto'
 import type { RegisterRequestDto } from '../dto/RegisterRequestDto'
 import type { AuthMode } from '../states/StateModels'
-import type { AuthField, UpdateUserPayload } from '../stores/AuthStoreTypes'
+import type { AuthField, UpdateUserPayload } from '../storetypes/AuthStoreTypes'
 
 interface AbstractProps {
     loading: boolean
@@ -12,10 +12,16 @@ interface AbstractProps {
 export interface BannerComponentProps {
     isAuthenticated: boolean
     firstName: string | null
+    navItems: BannerNavItem[]
     isDropdownOpen: boolean
     onUserNameClick: () => void
     onProfileClick: () => void
     onLogoutClick: () => void
+}
+
+export interface BannerNavItem {
+    label: string
+    to: string
 }
 
 export interface BannerContainerProps {
@@ -74,10 +80,4 @@ export interface ProfileContainerProps extends AbstractProps {
     age: number | null
     fetchUserProfile: () => void
     updateUser: (payload: UpdateUserPayload) => Promise<void>
-}
-
-export interface CounterComponentProps {
-    count: number
-    onIncrement: () => void
-    onDecrement: () => void
 }

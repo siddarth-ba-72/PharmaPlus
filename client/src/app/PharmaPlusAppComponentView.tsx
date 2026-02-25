@@ -1,10 +1,10 @@
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import type { AuthorizationState } from "../shared/states/StateModels";
 import { BannerComponent } from "../components/banner/BannerComponent";
-import { CounterComponent } from "../components/counter/CounterComponent";
 import { AuthComponent } from "../components/auth/AuthComponent";
 import { ProfileComponent } from "../components/profile/ProfileComponent";
 import { ToastComponent } from "../components/toast/ToastComponent";
+import { MedicinesComponent } from "../components/medicine/MedicinesComponent";
 
 export const PharmaPlusAppComponentView = (props: AuthorizationState) => {
 
@@ -17,8 +17,9 @@ export const PharmaPlusAppComponentView = (props: AuthorizationState) => {
                 <BannerComponent />
                 <section className="app-content">
                     <Routes>
-                        <Route path="/pharma-plus/home" element={<CounterComponent />} />
                         <Route path="/pharma-plus/login" element={<AuthComponent />} />
+                        <Route path="/pharma-plus/medicines" element={<MedicinesComponent />} />
+                        <Route path="/pharma-plus/home" element={<>Hello World</>} />
                         <Route element={RequiredAuthComponent}>
                             <Route path="/pharma-plus/profile" element={<ProfileComponent />} />
                             <Route element={RequiredAdminAuthComponent}>

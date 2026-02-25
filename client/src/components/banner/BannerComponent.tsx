@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { BannerComponentView } from './BannerComponentView'
-import type { BannerComponentProps } from '../../shared/props/PropModels'
+import type { BannerComponentProps, BannerNavItem } from '../../shared/props/PropModels'
 import { useAuthStore } from '../../store/AuthStore'
 import { useLogoutMutation, useUserProfileQuery } from '../../shared/queries/AuthQueries'
 
@@ -34,9 +34,17 @@ export const BannerComponent = () => {
         navigate('/pharma-plus/profile', { replace: true })
     }
 
+    const navItems: BannerNavItem[] = [
+        {
+            label: 'Medicines',
+            to: '/pharma-plus/medicines',
+        },
+    ]
+
     const bannerProps: BannerComponentProps = {
         isAuthenticated,
         firstName,
+        navItems,
         isDropdownOpen,
         onUserNameClick: toggleDropdown,
         onProfileClick: handleProfileClick,

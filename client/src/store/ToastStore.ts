@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import type { ToastState } from '../shared/stores/ToastStoreTypes'
+import type { ToastState } from '../shared/storetypes/ToastStoreTypes'
 
 export const useToastStore = create<ToastState>((setState) => ({
     isVisible: false,

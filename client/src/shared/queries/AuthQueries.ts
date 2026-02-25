@@ -6,8 +6,8 @@ import { AuthService } from '../../services/AuthService'
 import { useAuthStore } from '../../store/AuthStore'
 import type { ResponseDataDto } from '../dto/ResponseDto'
 import type { AuthDto } from '../dto/AuthDto'
-import type { UpdateUserPayload } from '../stores/AuthStoreTypes'
-import { mapAuthDtoToAuthUser } from '../stores/AuthStoreTypes'
+import type { UpdateUserPayload } from '../storetypes/AuthStoreTypes'
+import { mapAuthDtoToAuthUser } from '../storetypes/AuthStoreTypes'
 
 const authService = new AuthService()
 

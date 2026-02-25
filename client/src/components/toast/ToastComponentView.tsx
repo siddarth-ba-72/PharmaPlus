@@ -1,4 +1,4 @@
-import type { ToastCategory } from '../../shared/stores/ToastStoreTypes'
+import type { ToastCategory } from '../../shared/storetypes/ToastStoreTypes'
 
 type ToastComponentViewProps = {
     category: ToastCategory

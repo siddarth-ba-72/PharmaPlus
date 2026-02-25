@@ -1,5 +1,4 @@
 export const ApiEndpoints = {
-    COUNTER: '/pp/webapp/api/counter',
     LOGIN: '/pp/webapp/api/users/login-user',
     LOGOUT: '/pp/webapp/api/users/logout',
     REGISTER: '/pp/webapp/api/users/create-user',

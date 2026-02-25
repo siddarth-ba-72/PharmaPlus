@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import type { AuthField, AuthFormState, AuthStoreState, AuthUser } from '../shared/stores/AuthStoreTypes'
+import type { AuthField, AuthFormState, AuthStoreState, AuthUser } from '../shared/storetypes/AuthStoreTypes'
 
 const initialAuthFormState: AuthFormState = {
     username: null,
