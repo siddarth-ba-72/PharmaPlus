@@ -18,14 +18,14 @@ export const PharmaPlusAppComponentView = (props: AuthorizationState) => {
 
     return (
         <BrowserRouter>
-            <div className="app">
+            <div className="min-h-screen bg-gradient-to-b from-emerald-50 via-slate-50 to-slate-100 dark:from-slate-950 dark:via-slate-950 dark:to-slate-900">
                 <ToastComponent />
                 <BannerComponent />
-                <section className="app-content">
+                <section className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6">
                     <Routes>
                         <Route path="/pharma-plus/login" element={<AuthComponent />} />
                         <Route path="/pharma-plus/medicines" element={<MedicinesComponent />} />
-                        <Route path="/pharma-plus/home" element={<section />} />
+                        <Route path="/pharma-plus/home" element={<section className="min-h-[40vh]" />} />
                         <Route path="/pharma-plus/medicines/:medicineCode" element={<MedicineDetailsComponent />} />
                         <Route element={RequiredAuthComponent}>
                             <Route path="/pharma-plus/cart" element={<CartComponent />} />

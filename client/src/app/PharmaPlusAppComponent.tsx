@@ -1,6 +1,7 @@
 import { Navigate, Outlet, useLocation } from 'react-router-dom'
 import { useEffect } from 'react'
 import { useAuthStore } from '../store/AuthStore'
+import { useThemeStore } from '../store/ThemeStore'
 import { useToastStore } from '../store/ToastStore'
 import { PharmaPlusAppComponentView } from './PharmaPlusAppComponentView'
 
@@ -43,6 +44,11 @@ const RequireAdminRoute = () => {
 }
 
 export const PharmaPlusAppComponent = () => {
+    const initializeTheme = useThemeStore((state) => state.initializeTheme)
+
+    useEffect(() => {
+        initializeTheme()
+    }, [initializeTheme])
 
     return (
         <PharmaPlusAppComponentView

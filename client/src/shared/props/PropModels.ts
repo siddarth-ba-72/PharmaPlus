@@ -14,10 +14,13 @@ interface AbstractProps {
 export interface BannerComponentProps {
     isAuthenticated: boolean
     isAdmin: boolean
+    isDarkMode: boolean
+    username: string | null
     firstName: string | null
     navItems: BannerNavItem[]
     isDropdownOpen: boolean
     onUserNameClick: () => void
+    onToggleTheme: () => void
     onDashboardClick: () => void
     onProfileClick: () => void
     onLogoutClick: () => void

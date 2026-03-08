@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { BannerComponentView } from './BannerComponentView'
 import type { BannerComponentProps, BannerNavItem } from '../../shared/props/PropModels'
 import { useAuthStore } from '../../store/AuthStore'
+import { useThemeStore } from '../../store/ThemeStore'
 import { useLogoutMutation, useUserProfileQuery } from '../../shared/queries/AuthQueries'
 
 export const BannerComponent = () => {
@@ -11,7 +12,10 @@ export const BannerComponent = () => {
     const [isDropdownOpen, setIsDropdownOpen] = useState(false)
     const isAuthenticated = useAuthStore((state) => state.isAuthenticated)
     const isAdmin = useAuthStore((state) => state.user?.isAdmin ?? false)
+    const username = useAuthStore((state) => state.user?.username ?? null)
     const firstName = useAuthStore((state) => state.user?.firstName ?? null)
+    const isDarkMode = useThemeStore((state) => state.isDark)
+    const toggleTheme = useThemeStore((state) => state.toggleTheme)
     const { mutateAsync: logoutUser } = useLogoutMutation()
 
     useUserProfileQuery()
@@ -58,10 +62,13 @@ export const BannerComponent = () => {
     const bannerProps: BannerComponentProps = {
         isAuthenticated,
         isAdmin,
+        isDarkMode,
+        username,
         firstName,
         navItems,
         isDropdownOpen,
         onUserNameClick: toggleDropdown,
+        onToggleTheme: toggleTheme,
         onDashboardClick: handleDashboardClick,
         onProfileClick: handleProfileClick,
         onLogoutClick: handleLogout,
