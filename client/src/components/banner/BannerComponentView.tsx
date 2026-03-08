@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 
 export const BannerComponentView = (props: BannerComponentProps) => {
 
-    const { isAuthenticated, firstName, navItems, isDropdownOpen, onUserNameClick, onProfileClick, onLogoutClick } = props
+    const { isAuthenticated, isAdmin, firstName, navItems, isDropdownOpen, onUserNameClick, onDashboardClick, onProfileClick, onLogoutClick } = props
 
     return (
         <header className="banner">
@@ -22,6 +22,11 @@ export const BannerComponentView = (props: BannerComponentProps) => {
                     </button>
                     {isDropdownOpen && (
                         <div className="banner-dropdown">
+                            {isAdmin && (
+                                <button type="button" className="banner-dropdown-item" onClick={onDashboardClick}>
+                                    Dashboard
+                                </button>
+                            )}
                             <button type="button" className="banner-dropdown-item" onClick={onProfileClick}>
                                 Profile
                             </button>

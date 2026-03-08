@@ -1,6 +1,8 @@
 import type { ChangeEvent, FormEvent } from 'react'
 import type { LoginRequestDto } from '../dto/LoginRequestDto'
+import type { MedicineStockDto } from '../dto/MedicineStockDto'
 import type { RegisterRequestDto } from '../dto/RegisterRequestDto'
+import type { CartResponseDto } from '../dto/CartDto'
 import type { AuthMode } from '../states/StateModels'
 import type { AuthField, UpdateUserPayload } from '../storetypes/AuthStoreTypes'
 
@@ -11,10 +13,12 @@ interface AbstractProps {
 
 export interface BannerComponentProps {
     isAuthenticated: boolean
+    isAdmin: boolean
     firstName: string | null
     navItems: BannerNavItem[]
     isDropdownOpen: boolean
     onUserNameClick: () => void
+    onDashboardClick: () => void
     onProfileClick: () => void
     onLogoutClick: () => void
 }
@@ -80,4 +84,51 @@ export interface ProfileContainerProps extends AbstractProps {
     age: number | null
     fetchUserProfile: () => void
     updateUser: (payload: UpdateUserPayload) => Promise<void>
+}
+
+export interface MedicineListItem {
+    medicineName: string
+    medicineCode: string
+    composition: string
+    category: string | null
+    price: number | null
+    quantity: number | null
+}
+
+export interface MedicinesComponentViewProps {
+    medicines: MedicineListItem[]
+    currentPage: number
+    totalPages: number
+    pageSize: number
+    selectedCategory: string
+    categoryOptions: string[]
+    minPrice: string
+    maxPrice: string
+    loading: boolean
+    error: string | null
+    onCategoryChange: (category: string) => void
+    onMinPriceChange: (value: string) => void
+    onMaxPriceChange: (value: string) => void
+    onClearFilters: () => void
+    onPageChange: (nextPage: number) => void
+    onMedicineClick: (medicineCode: string) => void
+}
+
+export interface MedicineDetailsComponentViewProps {
+    medicineStock: MedicineStockDto | null
+    isAuthenticated: boolean
+    cartQuantity: number
+    savingCart: boolean
+    loading: boolean
+    error: string | null
+    onAddToCart: () => void
+    onDecreaseFromCart: () => void
+    onSaveCart: () => Promise<void>
+    onBackClick: () => void
+}
+
+export interface CartComponentViewProps {
+    items: CartResponseDto[]
+    loading: boolean
+    error: string | null
 }

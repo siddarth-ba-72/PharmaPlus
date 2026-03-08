@@ -53,33 +53,39 @@ export class CartService {
             }
             const cartRequests = req.body as CartRequestModel[];
             let userCartItems: CartSchema[] = await this.cartRepository.findUserCartItemsByUserCode(user.userCode) || [];
-            const medicineStocks = [];
+
             for (const cartReq of cartRequests) {
-                medicineStocks.push(await this.stockRepository.findMedicineStockByMedicineCode(cartReq.medicineCode));
-            }
-            if (userCartItems.length > 0) {
-                for (const cartItem of userCartItems) {
-                    const cartReq = cartRequests.find(req => req.medicineCode === cartItem.medicine.medicineCode);
-                    if (!cartReq) {
-                        await this.cartRepository.removeUserCartItem(cartItem);
-                    }
+                const stock = await this.stockRepository.findMedicineStockByMedicineCode(cartReq.medicineCode);
+                if (!stock) {
+                    continue;
                 }
-                userCartItems = await this.cartRepository.findUserCartItemsByUserCode(user.userCode) || [];
-            }
-            if (cartRequests.length > 0) {
-                for (const cartReq of cartRequests) {
-                    const stock = medicineStocks.find(med => med?.medicine.medicineCode === cartReq.medicineCode);
-                    if (!stock || cartReq.quantity > stock.quantity) {
-                        continue;
-                    } else {
-                        const cartItem = userCartItems.find(item => item.medicine.medicineCode === cartReq.medicineCode);
-                        if (cartItem) {
-                        } else {
-                            const newCartItem = await this.cartRepository.addNewItemToUserCart(cartReq, user.userCode);
-                        }
+
+                const existingCartItem = userCartItems.find(
+                    item => item.medicine.medicineCode === cartReq.medicineCode
+                );
+
+                if (cartReq.quantity <= 0) {
+                    if (existingCartItem) {
+                        await this.cartRepository.removeUserCartItem(existingCartItem);
+                        userCartItems = userCartItems.filter(
+                            item => item.medicine.medicineCode !== cartReq.medicineCode
+                        );
                     }
+                    continue;
                 }
+
+                if (cartReq.quantity > stock.quantity) {
+                    continue;
+                }
+
+                if (existingCartItem) {
+                    await this.cartRepository.updateUserCartItem(existingCartItem, cartReq);
+                    continue;
+                }
+
+                await this.cartRepository.addNewItemToUserCart(cartReq, user.userCode);
             }
+
             userCartItems = await this.cartRepository.findUserCartItemsByUserCode(user.userCode) || [];
             return await this.cartMapper.mapToCartResponse(userCartItems);
         } else {

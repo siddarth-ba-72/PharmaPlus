@@ -132,9 +132,8 @@ button:hover {
 
 .app-content {
   flex: 1;
-  display: grid;
-  place-content: center;
-  text-align: center;
+  width: min(1100px, 100%);
+  margin: 0 auto;
   padding: 1rem;
 }
 
@@ -289,4 +288,348 @@ button:hover {
 
 .toast-close-btn:hover {
   background: rgba(0, 0, 0, 0.06);
+}
+
+.medicines-wrapper {
+  width: 100%;
+  text-align: left;
+}
+
+.medicines-header h2 {
+  margin: 0;
+}
+
+.medicines-header p {
+  margin-top: 0.35rem;
+  color: #4b5563;
+}
+
+.medicines-grid {
+  margin-top: 1rem;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 0.9rem;
+}
+
+.medicines-filters {
+  margin-top: 0.9rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.7rem;
+  align-items: end;
+}
+
+.medicines-filters label {
+  display: grid;
+  gap: 0.3rem;
+  font-size: 0.86rem;
+  color: #374151;
+}
+
+.medicines-filters select,
+.medicines-filters input {
+  min-width: 140px;
+  border: 1px solid #d1d5db;
+  border-radius: 0.45rem;
+  padding: 0.45rem 0.55rem;
+  font-size: 0.9rem;
+}
+
+.medicines-filters button {
+  margin: 0;
+}
+
+.medicine-card {
+  margin: 0;
+  width: 100%;
+  text-align: left;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.75rem;
+  background: #fff;
+  color: #111827;
+  box-shadow: 0 8px 22px rgba(15, 23, 42, 0.06);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.medicine-card:hover {
+  background: #fff;
+  transform: translateY(-2px);
+  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.12);
+}
+
+.medicine-card h3 {
+  margin-top: 0;
+  margin-bottom: 0.6rem;
+}
+
+.medicine-card p {
+  margin: 0.2rem 0;
+}
+
+.medicine-composition {
+  color: #4b5563;
+  font-size: 0.9rem;
+}
+
+.medicines-pagination {
+  margin-top: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+}
+
+.medicines-pagination button {
+  margin: 0;
+}
+
+.medicine-details-wrapper {
+  width: 100%;
+  text-align: left;
+}
+
+.medicine-details-card {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.75rem;
+  padding: 1rem;
+  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.08);
+}
+
+.medicine-details-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.7rem;
+}
+
+.medicine-details-head h2 {
+  margin: 0;
+}
+
+.medicine-details-head button {
+  margin: 0;
+}
+
+.medicine-details-grid {
+  margin-top: 1rem;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 0.5rem 1rem;
+}
+
+.medicine-details-grid p {
+  margin: 0;
+}
+
+.medicine-cart-actions {
+  margin-top: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.medicine-cart-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  border: 1px solid #d1d5db;
+  border-radius: 0.6rem;
+  padding: 0.35rem 0.5rem;
+  background: #f8fafc;
+}
+
+.medicine-cart-controls button {
+  margin: 0;
+  min-width: 34px;
+  padding: 0.3rem 0.55rem;
+}
+
+.medicine-cart-icon {
+  font-size: 1rem;
+}
+
+.medicine-login-info {
+  margin-top: 1rem;
+  color: #9a3412;
+  font-weight: 600;
+}
+
+.admin-wrapper {
+  width: 100%;
+  text-align: left;
+}
+
+.admin-wrapper h2 {
+  margin-top: 0;
+  margin-bottom: 0.9rem;
+}
+
+.admin-actions-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 0.9rem;
+}
+
+.admin-action-card {
+  border: 1px solid #e5e7eb;
+  background: #ffffff;
+  border-radius: 0.75rem;
+  text-decoration: none;
+  color: #111827;
+  padding: 1rem;
+  box-shadow: 0 10px 25px rgba(15, 23, 42, 0.06);
+}
+
+.admin-action-card:hover {
+  background: #f8fafc;
+}
+
+.admin-action-card h3 {
+  margin-top: 0;
+  margin-bottom: 0.45rem;
+}
+
+.admin-action-card p {
+  margin: 0;
+  color: #4b5563;
+}
+
+.admin-table-wrapper {
+  border: 1px solid #e5e7eb;
+  border-radius: 0.75rem;
+  background: #fff;
+  overflow: auto;
+}
+
+.admin-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.admin-table th,
+.admin-table td {
+  border-bottom: 1px solid #e5e7eb;
+  padding: 0.65rem 0.75rem;
+  text-align: left;
+}
+
+.admin-table th {
+  background: #f8fafc;
+  font-size: 0.9rem;
+}
+
+.admin-form {
+  max-width: 520px;
+  display: grid;
+  gap: 0.65rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.75rem;
+  background: #fff;
+  padding: 1rem;
+  box-shadow: 0 10px 26px rgba(15, 23, 42, 0.06);
+}
+
+.admin-form label {
+  display: grid;
+  gap: 0.3rem;
+  font-size: 0.9rem;
+}
+
+.admin-form input,
+.admin-form textarea {
+  border: 1px solid #d1d5db;
+  border-radius: 0.5rem;
+  padding: 0.55rem 0.65rem;
+  font-size: 0.95rem;
+}
+
+.admin-form textarea {
+  min-height: 90px;
+  resize: vertical;
+}
+
+.admin-form button {
+  margin: 0;
+  width: fit-content;
+}
+
+.admin-autocomplete {
+  position: relative;
+}
+
+.admin-autocomplete-list {
+  position: absolute;
+  z-index: 20;
+  left: 0;
+  right: 0;
+  margin-top: 0.25rem;
+  border: 1px solid #d1d5db;
+  border-radius: 0.5rem;
+  background: #ffffff;
+  box-shadow: 0 10px 22px rgba(15, 23, 42, 0.12);
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+.admin-autocomplete-item {
+  width: 100%;
+  margin: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: #111827;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.5rem 0.65rem;
+  text-align: left;
+}
+
+.admin-autocomplete-item:hover {
+  background: #f3f4f6;
+}
+
+.cart-wrapper {
+  width: 100%;
+  text-align: left;
+}
+
+.cart-wrapper h2 {
+  margin-top: 0;
+  margin-bottom: 0.9rem;
+}
+
+.cart-table-wrapper {
+  border: 1px solid #e5e7eb;
+  border-radius: 0.75rem;
+  background: #fff;
+  overflow: auto;
+}
+
+.cart-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.cart-table th,
+.cart-table td {
+  border-bottom: 1px solid #e5e7eb;
+  padding: 0.65rem 0.75rem;
+  text-align: left;
+}
+
+.cart-table th {
+  background: #f8fafc;
+  font-size: 0.9rem;
+}
+
+.cart-medicine-link {
+  color: #0f766e;
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.cart-medicine-link:hover {
+  text-decoration: underline;
 }

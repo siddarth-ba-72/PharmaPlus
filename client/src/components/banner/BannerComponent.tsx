@@ -10,6 +10,7 @@ export const BannerComponent = () => {
     const navigate = useNavigate()
     const [isDropdownOpen, setIsDropdownOpen] = useState(false)
     const isAuthenticated = useAuthStore((state) => state.isAuthenticated)
+    const isAdmin = useAuthStore((state) => state.user?.isAdmin ?? false)
     const firstName = useAuthStore((state) => state.user?.firstName ?? null)
     const { mutateAsync: logoutUser } = useLogoutMutation()
 
@@ -34,19 +35,34 @@ export const BannerComponent = () => {
         navigate('/pharma-plus/profile', { replace: true })
     }
 
+    const handleDashboardClick = (): void => {
+        setIsDropdownOpen(false)
+        navigate('/pharma-plus/admin', { replace: true })
+    }
+
     const navItems: BannerNavItem[] = [
         {
             label: 'Medicines',
             to: '/pharma-plus/medicines',
         },
+        ...(isAuthenticated
+            ? [
+                {
+                    label: 'My Cart',
+                    to: '/pharma-plus/cart',
+                } as BannerNavItem,
+            ]
+            : []),
     ]
 
     const bannerProps: BannerComponentProps = {
         isAuthenticated,
+        isAdmin,
         firstName,
         navItems,
         isDropdownOpen,
         onUserNameClick: toggleDropdown,
+        onDashboardClick: handleDashboardClick,
         onProfileClick: handleProfileClick,
         onLogoutClick: handleLogout,
     }

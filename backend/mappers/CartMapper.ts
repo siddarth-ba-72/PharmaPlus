@@ -18,6 +18,7 @@ export class CartMapper {
         const cartResponse: CartResponseModel[] = [];
         for (const item of cartItems) {
             const cartRes = new CartResponseModel();
+            cartRes.medicineCode = item.medicine ? item.medicine.medicineCode : "";
             cartRes.medicine = item.medicine ? item.medicine.medicineName : "";
             cartRes.quantity = item.quantity;
             cartResponse.push(cartRes);

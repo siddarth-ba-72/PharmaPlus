@@ -1,4 +1,12 @@
 export const ApiEndpoints = {
+    ALL_USERS: '/pp/webapp/api/users/all-users',
+    ALL_MEDICINES: '/pp/webapp/api/medicines/all-medicines',
+    ALL_MEDICINES_STOCK: '/pp/webapp/api/stocks/all-medicines-stock',
+    MEDICINE_STOCK: '/pp/webapp/api/stocks/medicine-stock',
+    MODIFY_CART: '/pp/webapp/api/carts/modify-cart',
+    USER_CART: '/pp/webapp/api/carts/user-cart',
+    SAVE_MEDICINE: '/pp/webapp/api/medicines/save-medicine',
+    MODIFY_STOCK: '/pp/webapp/api/stocks/modify-stock',
     LOGIN: '/pp/webapp/api/users/login-user',
     LOGOUT: '/pp/webapp/api/users/logout',
     REGISTER: '/pp/webapp/api/users/create-user',
