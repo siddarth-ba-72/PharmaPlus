@@ -2,6 +2,7 @@ import { useEffect, useState, type ChangeEvent, type FormEvent } from 'react'
 import { ProfileComponentView } from './ProfileComponentView'
 import { useAuthStore } from '../../store/AuthStore'
 import { useUpdateUserMutation, useUserProfileQuery } from '../../shared/queries/AuthQueries'
+import { useUserOrdersQuery } from '../../shared/queries/OrderQueries'
 import type { ProfileComponentProps } from '../../shared/props/PropModels';
 
 export const ProfileComponent = () => {
@@ -14,6 +15,7 @@ export const ProfileComponent = () => {
     const [localError, setLocalError] = useState<string | null>(null)
     const user = useAuthStore((state) => state.user)
     const userProfileQuery = useUserProfileQuery()
+    const userOrdersQuery = useUserOrdersQuery()
     const updateUserMutation = useUpdateUserMutation()
     const submitting = updateUserMutation.isPending
 
@@ -103,6 +105,9 @@ export const ProfileComponent = () => {
         isEditing,
         submitting,
         error,
+        orders: userOrdersQuery.data ?? [],
+        ordersLoading: userOrdersQuery.isLoading,
+        ordersError: userOrdersQuery.error instanceof Error ? userOrdersQuery.error.message : null,
         onEditClick: enterEditMode,
         onCancelEdit: cancelEditMode,
         onInputChange: handleInputChange,

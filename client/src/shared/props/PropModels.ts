@@ -3,6 +3,7 @@ import type { LoginRequestDto } from '../dto/LoginRequestDto'
 import type { MedicineStockDto } from '../dto/MedicineStockDto'
 import type { RegisterRequestDto } from '../dto/RegisterRequestDto'
 import type { CartResponseDto } from '../dto/CartDto'
+import type { OrderResponseDto, UserOrderResponseDto } from '../dto/OrderDto'
 import type { AuthMode } from '../states/StateModels'
 import type { AuthField, UpdateUserPayload } from '../storetypes/AuthStoreTypes'
 
@@ -73,6 +74,9 @@ export interface ProfileComponentProps {
     isEditing: boolean
     submitting: boolean
     error: string | null
+    orders: UserOrderResponseDto[]
+    ordersLoading: boolean
+    ordersError: string | null
     onEditClick: () => void
     onCancelEdit: () => void
     onInputChange: (event: ChangeEvent<HTMLInputElement>) => void
@@ -134,4 +138,38 @@ export interface CartComponentViewProps {
     items: CartResponseDto[]
     loading: boolean
     error: string | null
+    checkoutPhase: 1 | 2 | 3
+    deliveryAddress: {
+        fullName: string
+        phoneNumber: string
+        addressLine1: string
+        addressLine2: string
+        city: string
+        state: string
+        pincode: string
+        landmark: string
+    }
+    selectedPaymentMethod: 'upi' | 'card' | 'cod'
+    paymentDetails: {
+        upiId: string
+        cardName: string
+        cardNumber: string
+        cardExpiry: string
+        cardCvv: string
+    }
+    paymentProgress: number
+    placingOrder: boolean
+    addressValidationError: string | null
+    paymentValidationError: string | null
+    orderResult: OrderResponseDto | null
+    onAddressInputChange: (event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void
+    onPaymentMethodChange: (method: 'upi' | 'card' | 'cod') => void
+    onPaymentInputChange: (event: ChangeEvent<HTMLInputElement>) => void
+    onProceedToPurchase: () => void
+    onContinueToSummary: () => void
+    onContinueToPayment: () => void
+    onBackToAddress: () => void
+    onBackToSummary: () => void
+    onPlaceOrder: () => Promise<void>
+    onStartNewCheckout: () => void
 }

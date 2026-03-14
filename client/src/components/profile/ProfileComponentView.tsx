@@ -1,4 +1,5 @@
 import type { ProfileComponentProps } from '../../shared/props/PropModels'
+import { Link } from 'react-router-dom'
 
 export const ProfileComponentView = (props: ProfileComponentProps) => {
     const {
@@ -10,11 +11,20 @@ export const ProfileComponentView = (props: ProfileComponentProps) => {
         isEditing,
         submitting,
         error,
+        orders,
+        ordersLoading,
+        ordersError,
         onEditClick,
         onCancelEdit,
         onInputChange,
         onSubmit,
     } = props
+
+    const sortedOrders = [...orders].sort((a, b) => new Date(b.orderDate).getTime() - new Date(a.orderDate).getTime())
+    const latestOrder = sortedOrders[0] ?? null
+
+    const formatCurrency = (amount: number): string => `Rs. ${amount.toFixed(2)}`
+    const formatDateTime = (value: string): string => new Date(value).toLocaleString()
 
     if (!isEditing) {
         return (
@@ -31,6 +41,55 @@ export const ProfileComponentView = (props: ProfileComponentProps) => {
                 <button type="button" onClick={onEditClick} className="mt-5 rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-700">
                     Edit Details
                 </button>
+
+                <div className="mt-7 border-t border-slate-200 pt-6 dark:border-slate-700">
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                        <h3 className="text-xl font-bold text-slate-900 dark:text-slate-100">My Orders</h3>
+                        <Link to="/pharma-plus/my-orders" className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:border-emerald-500 hover:text-emerald-700 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200 dark:hover:border-emerald-500 dark:hover:text-emerald-300">
+                            View Full History
+                        </Link>
+                    </div>
+
+                    {ordersLoading ? (
+                        <p className="mt-3 text-sm text-slate-500 dark:text-slate-400">Loading your orders...</p>
+                    ) : ordersError ? (
+                        <p className="mt-3 rounded-lg bg-rose-50 px-3 py-2 text-sm font-medium text-rose-700 dark:bg-rose-950/60 dark:text-rose-200">{ordersError}</p>
+                    ) : sortedOrders.length === 0 ? (
+                        <p className="mt-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-600 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-300">No previous orders found.</p>
+                    ) : (
+                        <div className="mt-4 space-y-4">
+                            {latestOrder && (
+                                <article className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 dark:border-emerald-900 dark:bg-emerald-950/40">
+                                    <p className="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-700 dark:text-emerald-300">Latest Order</p>
+                                    <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
+                                        <p className="text-sm font-bold text-emerald-900 dark:text-emerald-100">Order #{latestOrder.orderNumber}</p>
+                                        <p className="text-sm font-semibold text-emerald-800 dark:text-emerald-200">{formatCurrency(latestOrder.totalAmount)}</p>
+                                    </div>
+                                    <p className="mt-1 text-xs text-emerald-900/80 dark:text-emerald-200">Transaction: {latestOrder.transaction} • {latestOrder.paymentMethod}</p>
+                                </article>
+                            )}
+
+                            <div className="space-y-3">
+                                {sortedOrders.map((order) => (
+                                    <article key={`${order.orderNumber}-${order.transaction}`} className="rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-950/70">
+                                        <div className="flex flex-wrap items-center justify-between gap-2">
+                                            <p className="text-sm font-bold text-slate-900 dark:text-slate-100">#{order.orderNumber}</p>
+                                            <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">{formatCurrency(order.totalAmount)}</p>
+                                        </div>
+                                        <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Transaction: {order.transaction} • {order.paymentMethod}</p>
+                                        <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Ordered: {formatDateTime(order.orderDate)}</p>
+                                        <p className="text-xs text-slate-500 dark:text-slate-400">Paid: {formatDateTime(order.paymentDate)}</p>
+                                        <div className="mt-2 flex flex-wrap gap-1">
+                                            {order.medicines.map((medicineName, index) => (
+                                                <span key={`${order.orderNumber}-${index}-${medicineName}`} className="rounded-md bg-slate-100 px-2 py-1 text-xs text-slate-700 dark:bg-slate-800 dark:text-slate-200">{medicineName}</span>
+                                            ))}
+                                        </div>
+                                    </article>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+                </div>
             </section>
         )
     }

@@ -12,6 +12,7 @@ export class OrderResponseModel {
     user!: string;
     orderNumber!: string;
     transaction!: string;
+    totalAmount!: number;
     medicines!: OrderMedicineResponseModel[];
 
 }

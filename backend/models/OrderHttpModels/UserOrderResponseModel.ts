@@ -1,7 +1,10 @@
 export class UserOrderResponseModel {
 
+    orderNumber!: string;
+    transaction!: string;
+    paymentMethod!: string;
     medicines!: string[];
-    price!: number;
+    totalAmount!: number;
     orderDate!: Date;
     paymentDate!: Date;
 

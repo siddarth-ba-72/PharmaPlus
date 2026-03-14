@@ -55,6 +55,10 @@ export const BannerComponent = () => {
                     label: 'My Cart',
                     to: '/pharma-plus/cart',
                 } as BannerNavItem,
+                {
+                    label: 'My Orders',
+                    to: '/pharma-plus/my-orders',
+                } as BannerNavItem,
             ]
             : []),
     ]

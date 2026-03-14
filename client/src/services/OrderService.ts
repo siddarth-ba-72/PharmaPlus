@@ -1,20 +1,20 @@
 import { ApiEndpoints } from '../shared/api/ApiEndpoints'
-import type { CartRequestDto, CartResponseDto } from '../shared/dto/CartDto'
+import type { OrderRequestDto, OrderResponseDto, UserOrderResponseDto } from '../shared/dto/OrderDto'
 import type { ResponseDto } from '../shared/dto/ResponseDto'
 import { AbstractService } from './AbstractService'
 import axios from 'axios'
 
-type ModifyCartResponseDto = {
+type PlaceOrderResponseDto = {
     message?: string
-    userCartItems?: CartResponseDto[]
+    order?: OrderResponseDto
 }
 
-type UserCartResponseDto = {
+type UserOrdersResponseDto = {
     message?: string
-    userCartItems?: CartResponseDto[]
+    userOrders?: UserOrderResponseDto[]
 }
 
-export class CartService extends AbstractService {
+export class OrderService extends AbstractService {
     private getBackendErrorMessage(error: unknown, fallbackMessage: string): string {
         if (axios.isAxiosError(error)) {
             if (error.response?.status === 204) {
@@ -53,19 +53,19 @@ export class CartService extends AbstractService {
         return fallbackMessage
     }
 
-    async saveCartItems(items: CartRequestDto[]): Promise<string> {
-        const response = await this.post<ResponseDto<ModifyCartResponseDto>, CartRequestDto[]>(ApiEndpoints.MODIFY_CART, items)
+    async placeOrder(orderRequest: OrderRequestDto): Promise<OrderResponseDto> {
+        const response = await this.post<ResponseDto<PlaceOrderResponseDto>, OrderRequestDto>(ApiEndpoints.NEW_ORDER, orderRequest)
 
-        if (!response.success) {
-            throw new Error(response.data.message ?? 'Could not save cart.')
+        if (!response.success || !response.data.order) {
+            throw new Error(response.data.message ?? 'Could not place the order.')
         }
 
-        return response.data.message ?? 'Cart saved successfully.'
+        return response.data.order
     }
 
-    async getUserCartItems(): Promise<CartResponseDto[]> {
+    async getUserOrders(): Promise<UserOrderResponseDto[]> {
         try {
-            const response = await this.get<ResponseDto<UserCartResponseDto> | ''>(ApiEndpoints.USER_CART)
+            const response = await this.get<ResponseDto<UserOrdersResponseDto> | ''>(ApiEndpoints.MY_ORDERS)
 
             if (!response || typeof response === 'string') {
                 return []
@@ -73,20 +73,20 @@ export class CartService extends AbstractService {
 
             if (!response.success) {
                 const backendMessage = response.data?.message ?? ''
-                if (/empty/i.test(backendMessage)) {
+                if (/no orders/i.test(backendMessage)) {
                     return []
                 }
-                throw new Error(backendMessage || 'Could not fetch cart items.')
+                throw new Error(backendMessage || 'Could not fetch user orders.')
             }
 
-            return response.data.userCartItems ?? []
+            return response.data.userOrders ?? []
         } catch (error) {
             if (axios.isAxiosError(error) && error.response?.status === 204) {
                 return []
             }
 
-            const message = this.getBackendErrorMessage(error, 'Could not fetch cart items.')
-            if (/empty/i.test(message)) {
+            const message = this.getBackendErrorMessage(error, 'Could not fetch user orders.')
+            if (/no orders/i.test(message)) {
                 return []
             }
             throw new Error(message)

@@ -5,6 +5,8 @@ export const ApiEndpoints = {
     MEDICINE_STOCK: '/pp/webapp/api/stocks/medicine-stock',
     MODIFY_CART: '/pp/webapp/api/carts/modify-cart',
     USER_CART: '/pp/webapp/api/carts/user-cart',
+    NEW_ORDER: '/pp/webapp/api/orders/new-order',
+    MY_ORDERS: '/pp/webapp/api/orders/my-orders',
     SAVE_MEDICINE: '/pp/webapp/api/medicines/save-medicine',
     MODIFY_STOCK: '/pp/webapp/api/stocks/modify-stock',
     LOGIN: '/pp/webapp/api/users/login-user',

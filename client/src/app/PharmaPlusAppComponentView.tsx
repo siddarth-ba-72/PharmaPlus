@@ -11,6 +11,7 @@ import { ProfileComponent } from "../components/profile/ProfileComponent";
 import { ToastComponent } from "../components/toast/ToastComponent";
 import { MedicineDetailsComponent } from "../components/medicine/MedicineDetailsComponent";
 import { MedicinesComponent } from "../components/medicine/MedicinesComponent";
+import { MyOrdersComponent } from "../components/order/MyOrdersComponent";
 
 export const PharmaPlusAppComponentView = (props: AuthorizationState) => {
 
@@ -30,6 +31,7 @@ export const PharmaPlusAppComponentView = (props: AuthorizationState) => {
                         <Route element={RequiredAuthComponent}>
                             <Route path="/pharma-plus/cart" element={<CartComponent />} />
                             <Route path="/pharma-plus/profile" element={<ProfileComponent />} />
+                            <Route path="/pharma-plus/my-orders" element={<MyOrdersComponent />} />
                             <Route element={RequiredAdminAuthComponent}>
                                 <Route path="/pharma-plus/admin" element={<AdminDashboardComponent />} />
                                 <Route path="/pharma-plus/admin/users" element={<AdminUsersComponent />} />

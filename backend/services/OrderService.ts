@@ -77,7 +77,7 @@ export class OrderService {
                         `Stock not found for medicine code: ${item.medicine.medicineCode}`
                     );
                 }
-                totalActualPrice += itemStock.price;
+                totalActualPrice += (itemStock.price * item.quantity);
             }
             const orderReq = req.body as OrderRequestModel;
             orderReq.paymentPrice = totalActualPrice;
@@ -100,7 +100,7 @@ export class OrderService {
             }
             await this.stockRepository.updateMedicineStockUponOrder(newOrderItems);
             await this.cartRepository.clearUserCartUponOrder(userCartItems);
-            return await this.orderMapper.mapToOrderResponseModel(user, orderMedicineCode, transactionCode, newOrderItems);
+            return await this.orderMapper.mapToOrderResponseModel(user, orderMedicineCode, transactionCode, totalActualPrice, newOrderItems);
         } else {
             throw new ResourceNotFoundException(
                 HttpResponseStatusCodesConstants.BAD_REQUEST_FAILURE,
