@@ -5,6 +5,7 @@ import MedicineRouter from "../routes/MedicineRouter";
 import StockRouter from "../routes/StockRouter";
 import CartRouter from "../routes/CartRouter";
 import OrderRouter from "../routes/OrderRouter";
+import MedicineImportRouter from "../routes/MedicineImportRouter";
 
 export class RouterConfig {
 
@@ -14,6 +15,7 @@ export class RouterConfig {
         app.use("/pp/webapp/api/stocks", StockRouter);
         app.use("/pp/webapp/api/carts", CartRouter);
         app.use("/pp/webapp/api/orders", OrderRouter);
+        app.use("/pp/webapp/api/admin/medicine-imports", MedicineImportRouter);
 
         app.get("/client/ng/*", (req, res) => {
             res.sendFile(path.join(__dirname, "../../client/dist/pharma-plus/browser/index.html"));

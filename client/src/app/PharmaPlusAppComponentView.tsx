@@ -5,6 +5,7 @@ import { AuthComponent } from "../components/auth/AuthComponent";
 import { CartComponent } from "../components/cart/CartComponent";
 import { AdminAddMedicineComponent } from "../components/admin/AdminAddMedicineComponent";
 import { AdminDashboardComponent } from "../components/admin/AdminDashboardComponent";
+import { AdminMedicineImportComponent } from "../components/admin/AdminMedicineImportComponent";
 import { AdminUpdateMedicineComponent } from "../components/admin/AdminUpdateMedicineComponent";
 import { AdminUsersComponent } from "../components/admin/AdminUsersComponent";
 import { ProfileComponent } from "../components/profile/ProfileComponent";
@@ -38,6 +39,7 @@ export const PharmaPlusAppComponentView = (props: AuthorizationState) => {
                                 <Route path="/pharma-plus/admin/users" element={<AdminUsersComponent />} />
                                 <Route path="/pharma-plus/admin/medicines/add" element={<AdminAddMedicineComponent />} />
                                 <Route path="/pharma-plus/admin/medicines/update-stock" element={<AdminUpdateMedicineComponent />} />
+                                <Route path="/pharma-plus/admin/medicines/import" element={<AdminMedicineImportComponent />} />
                             </Route>
                         </Route>
                         <Route path="*" element={<Navigate to="/pharma-plus/home" replace />} />
