@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="520" viewBox="0 0 1200 520" role="img"
+    aria-labelledby="title desc">
+    <title id="title">Wellness Journey</title>
+    <desc id="desc">Green-violet themed image with heart pulse lines and care text.</desc>
+    <defs>
+        <linearGradient id="bg3" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stop-color="#047857" />
+            <stop offset="100%" stop-color="#134e4a" />
+        </linearGradient>
+    </defs>
+    <rect width="1200" height="520" fill="url(#bg3)" rx="32" />
+    <circle cx="100" cy="430" r="120" fill="#99f6e4" fill-opacity="0.18" />
+    <circle cx="1090" cy="100" r="95" fill="#5eead4" fill-opacity="0.2" />
+    <polyline points="110,280 210,280 245,220 285,330 335,180 380,280 470,280" fill="none"
+        stroke="#ccfbf1" stroke-width="14" stroke-linecap="round" stroke-linejoin="round" />
+    <text x="520" y="190" font-size="48" fill="#ecfdf5"
+        font-family="Trebuchet MS, Verdana, sans-serif" font-weight="700">Build Your Better Routine</text>
+    <text x="520" y="245" font-size="28" fill="#a7f3d0"
+        font-family="Trebuchet MS, Verdana, sans-serif">From daily essentials to long-term wellness
+        support.</text>
+</svg>

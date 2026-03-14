@@ -12,6 +12,7 @@ import { ToastComponent } from "../components/toast/ToastComponent";
 import { MedicineDetailsComponent } from "../components/medicine/MedicineDetailsComponent";
 import { MedicinesComponent } from "../components/medicine/MedicinesComponent";
 import { MyOrdersComponent } from "../components/order/MyOrdersComponent";
+import { HomeComponent } from "../components/home/HomeComponent";
 
 export const PharmaPlusAppComponentView = (props: AuthorizationState) => {
 
@@ -26,7 +27,7 @@ export const PharmaPlusAppComponentView = (props: AuthorizationState) => {
                     <Routes>
                         <Route path="/pharma-plus/login" element={<AuthComponent />} />
                         <Route path="/pharma-plus/medicines" element={<MedicinesComponent />} />
-                        <Route path="/pharma-plus/home" element={<section className="min-h-[40vh]" />} />
+                        <Route path="/pharma-plus/home" element={<HomeComponent />} />
                         <Route path="/pharma-plus/medicines/:medicineCode" element={<MedicineDetailsComponent />} />
                         <Route element={RequiredAuthComponent}>
                             <Route path="/pharma-plus/cart" element={<CartComponent />} />

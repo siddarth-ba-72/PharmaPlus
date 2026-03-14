@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="520" viewBox="0 0 1200 520" role="img"
+    aria-labelledby="title desc">
+    <title id="title">Express Delivery</title>
+    <desc id="desc">Blue and mint themed banner with medicine capsule and delivery text.</desc>
+    <defs>
+        <linearGradient id="bg1" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stop-color="#0f766e" />
+            <stop offset="100%" stop-color="#0369a1" />
+        </linearGradient>
+        <linearGradient id="pill1" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stop-color="#ffffff" />
+            <stop offset="100%" stop-color="#bbf7d0" />
+        </linearGradient>
+    </defs>
+    <rect width="1200" height="520" fill="url(#bg1)" rx="32" />
+    <circle cx="1050" cy="110" r="90" fill="#ffffff" fill-opacity="0.15" />
+    <circle cx="980" cy="430" r="130" fill="#34d399" fill-opacity="0.2" />
+    <rect x="140" y="150" width="270" height="120" rx="60" fill="url(#pill1)"
+        transform="rotate(-18 280 210)" />
+    <line x1="275" y1="135" x2="275" y2="285" stroke="#0f766e" stroke-width="12" />
+    <text x="460" y="190" font-size="48" fill="#ecfeff"
+        font-family="Trebuchet MS, Verdana, sans-serif" font-weight="700">Medicines At Your Doorstep</text>
+    <text x="460" y="245" font-size="28" fill="#cffafe"
+        font-family="Trebuchet MS, Verdana, sans-serif">Fast dispatch. Genuine stock. Seamless
+        checkout.</text>
+</svg>
