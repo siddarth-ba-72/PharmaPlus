@@ -49,14 +49,17 @@ flowchart TD
 ### Frontend Architecture
 
 ```mermaid
+---
+id: a5f91766-b2a2-43dd-9e0b-362286108e8e
+---
 flowchart TD
-		APP[React App Shell + Router] --> PAGES[Feature Pages and Components]
-		PAGES --> Q[React Query Hooks]
-		Q --> API[Service Layer (Axios)]
-		API --> BE[Backend API]
+    APP[React App Shell + Router] --> PAGES[Feature Pages and Components]
+    PAGES --> Q[React Query Hooks]
+    Q --> API["Service Layer (Axios)"]
+    API --> BE[Backend API]
 
-		PAGES --> STORE[Zustand Stores]
-		STORE --> UI[Auth + Cart + Toast + Theme State]
+    PAGES --> STORE[Zustand Stores]
+    STORE --> UI[Auth + Cart + Toast + Theme State]
 ```
 
 ## Tech Stack
