@@ -48,6 +48,18 @@ export class MedicineImportJobSchema {
     @Column({ type: "simple-json", nullable: true })
     summaryJson!: Record<string, any> | null;
 
+    @Column({ type: "boolean", default: false })
+    cancelRequested!: boolean;
+
+    @Column({ type: "timestamp", nullable: true })
+    approvedAt!: Date | null;
+
+    @Column({ type: "timestamp", nullable: true })
+    startedAt!: Date | null;
+
+    @Column({ type: "timestamp", nullable: true })
+    finishedAt!: Date | null;
+
     @CreateDateColumn({ type: "timestamp" })
     createdAt!: Date;
 

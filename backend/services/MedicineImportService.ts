@@ -1,8 +1,7 @@
-import path from "path";
-import fs from "fs/promises";
 import ExcelJS from "exceljs";
 import { v4 as uuidV4 } from "uuid";
 import { Repository } from "typeorm";
+import { AbstractException } from "../exceptions/AbstractException";
 import { BadRequestException, ResourceNotFoundException } from "../exceptions/CustomExceptions";
 import { HttpResponseStatusCodesConstants } from "../utils/HttpResponseStatusCodesConstants";
 import {
@@ -22,32 +21,36 @@ import { MedicineImportRowSchema } from "../schema/MedicineImportRowSchema";
 import { MedicineCategorySchema } from "../schema/MedicineCategorySchema";
 import { DatabaseConnectionConfig } from "../config/DatabaseConnectionConfig";
 import { MedicineDaoRepository } from "../repository/MedicineDaoRepository";
+import { MedicineService } from "./MedicineService";
 
 type HeaderMap = Record<string, "medicineName" | "medicineCode" | "composition" | "categoryCode">;
 
 export class MedicineImportService {
 
+    private static runningJobIds: Set<string> = new Set<string>();
+    private static uploadBufferStore: Map<string, { fileBuffer: Buffer; createdAt: number }> = new Map<string, { fileBuffer: Buffer; createdAt: number }>();
+
     private uploadRepository: MedicineImportUploadRepository;
     private jobRepository: MedicineImportJobRepository;
     private rowRepository: MedicineImportRowRepository;
     private medicineRepository: MedicineDaoRepository;
+    private medicineService: MedicineService;
     private categoryRepository: Repository<MedicineCategorySchema>;
     private readonly uploadExpiryMinutes: number;
     private readonly maxUploadSizeBytes: number;
-    private readonly uploadRootPath: string;
 
     constructor() {
         this.uploadRepository = new MedicineImportUploadRepository();
         this.jobRepository = new MedicineImportJobRepository();
         this.rowRepository = new MedicineImportRowRepository();
         this.medicineRepository = new MedicineDaoRepository();
+        this.medicineService = new MedicineService();
         this.categoryRepository = DatabaseConnectionConfig
             .getInstance()
             .getDataSource()
             .getRepository(MedicineCategorySchema);
         this.uploadExpiryMinutes = 30;
         this.maxUploadSizeBytes = 10 * 1024 * 1024;
-        this.uploadRootPath = path.join(process.cwd(), "tmp", "medicine-imports");
     }
 
     public async createUploadSession(payload: CreateUploadSessionRequestModel): Promise<Record<string, any>> {
@@ -99,13 +102,14 @@ export class MedicineImportService {
 
         this.validateUploadedFile(file.mimetype, file.size);
 
-        await fs.mkdir(this.uploadRootPath, { recursive: true });
-        const sanitizedFileName = this.sanitizeFileName(file.originalname || uploadSession.fileName);
-        const savedFilePath = path.join(this.uploadRootPath, `${uploadSession.uploadId}-${Date.now()}-${sanitizedFileName}`);
+        this.cleanupExpiredUploadBuffers();
+        MedicineImportService.uploadBufferStore.set(uploadId, {
+            fileBuffer: file.buffer,
+            createdAt: Date.now()
+        });
 
-        await fs.writeFile(savedFilePath, file.buffer);
         const workbook = new ExcelJS.Workbook();
-        await workbook.xlsx.load(file.buffer);
+        await workbook.xlsx.load(file.buffer as any);
 
         if (workbook.worksheets.length === 0) {
             throw new BadRequestException(
@@ -117,7 +121,7 @@ export class MedicineImportService {
         const defaultWorksheet = workbook.worksheets[0];
         const headerCandidates = this.detectHeaderRowCandidates(defaultWorksheet);
 
-        uploadSession.storagePath = savedFilePath;
+        uploadSession.storagePath = null;
         uploadSession.sheetNames = workbook.worksheets.map((sheet) => sheet.name);
         uploadSession.headerRowCandidates = headerCandidates;
         uploadSession.status = "UPLOADED";
@@ -139,7 +143,8 @@ export class MedicineImportService {
         }
 
         const uploadSession = await this.uploadRepository.findByUploadId(payload.uploadId);
-        if (!uploadSession || !uploadSession.storagePath || uploadSession.status !== "UPLOADED") {
+        const inMemoryUpload = MedicineImportService.uploadBufferStore.get(payload.uploadId);
+        if (!uploadSession || uploadSession.status !== "UPLOADED" || !inMemoryUpload) {
             throw new BadRequestException(
                 HttpResponseStatusCodesConstants.BAD_REQUEST_FAILURE,
                 "Upload is not completed. Please complete file upload first."
@@ -147,8 +152,22 @@ export class MedicineImportService {
         }
 
         const workbook = new ExcelJS.Workbook();
-        const fileBuffer = await fs.readFile(uploadSession.storagePath);
-        await workbook.xlsx.load(fileBuffer);
+        let fileBuffer: Buffer;
+        if (inMemoryUpload?.fileBuffer) {
+            fileBuffer = inMemoryUpload.fileBuffer;
+        } else if (uploadSession.storagePath) {
+            throw new BadRequestException(
+                HttpResponseStatusCodesConstants.BAD_REQUEST_FAILURE,
+                "Legacy disk-based uploads are disabled. Please re-upload the file."
+            );
+        } else {
+            throw new BadRequestException(
+                HttpResponseStatusCodesConstants.BAD_REQUEST_FAILURE,
+                "Upload buffer not found. Please upload the file again."
+            );
+        }
+
+        await workbook.xlsx.load(fileBuffer as any);
 
         const worksheet = payload.sheetName
             ? workbook.getWorksheet(payload.sheetName)
@@ -184,6 +203,10 @@ export class MedicineImportService {
         job.warningRows = 0;
         job.invalidRows = 0;
         job.summaryJson = null;
+        job.cancelRequested = false;
+        job.approvedAt = null;
+        job.startedAt = null;
+        job.finishedAt = null;
         await this.jobRepository.createJob(job);
 
         const seenMedicineCodes = new Set<string>();
@@ -206,7 +229,8 @@ export class MedicineImportService {
                 categoryCodes,
                 existingMedicineCodeSet,
                 existingMedicineNameSet,
-                seenMedicineCodes
+                seenMedicineCodes,
+                job.mode
             );
 
             if (mappedPayload.medicineCode) {
@@ -255,6 +279,9 @@ export class MedicineImportService {
         job.state = "REVIEW_REQUIRED";
         await this.jobRepository.updateJob(job);
 
+        // Upload file is no longer needed after row-level preview is persisted.
+        MedicineImportService.uploadBufferStore.delete(payload.uploadId);
+
         return {
             jobId: job.jobId,
             state: job.state,
@@ -277,6 +304,8 @@ export class MedicineImportService {
             );
         }
 
+        const executionBreakdown = await this.rowRepository.getExecutionBreakdown(jobId);
+
         return {
             jobId: job.jobId,
             uploadId: job.uploadId,
@@ -291,7 +320,18 @@ export class MedicineImportService {
                 warningRows: job.warningRows,
                 invalidRows: job.invalidRows
             },
+            execution: {
+                pending: executionBreakdown.PENDING || 0,
+                processing: executionBreakdown.PROCESSING || 0,
+                success: executionBreakdown.SUCCESS || 0,
+                failedRetryable: executionBreakdown.FAILED_RETRYABLE || 0,
+                failedPermanent: executionBreakdown.FAILED_PERMANENT || 0
+            },
             summary: job.summaryJson,
+            cancelRequested: job.cancelRequested,
+            approvedAt: job.approvedAt,
+            startedAt: job.startedAt,
+            finishedAt: job.finishedAt,
             createdAt: job.createdAt,
             updatedAt: job.updatedAt
         };
@@ -336,6 +376,326 @@ export class MedicineImportService {
             pageSize: safePageSize,
             total
         };
+    }
+
+    public async updateJobRow(
+        jobId: string,
+        rowNumber: number,
+        overrides: Partial<MappedMedicinePayload>
+    ): Promise<Record<string, any>> {
+        const job = await this.jobRepository.findByJobId(jobId);
+        if (!job) {
+            throw new ResourceNotFoundException(
+                HttpResponseStatusCodesConstants.NOT_FOUND_FAILURE,
+                "Import job not found"
+            );
+        }
+
+        if (job.state !== "REVIEW_REQUIRED") {
+            throw new BadRequestException(
+                HttpResponseStatusCodesConstants.BAD_REQUEST_FAILURE,
+                "Rows can be edited only when job is in REVIEW_REQUIRED state"
+            );
+        }
+
+        const row = await this.rowRepository.findRowByJobAndRowNumber(jobId, rowNumber);
+        if (!row) {
+            throw new ResourceNotFoundException(
+                HttpResponseStatusCodesConstants.NOT_FOUND_FAILURE,
+                "Import row not found"
+            );
+        }
+
+        const allowedFields = new Set(["medicineName", "medicineCode", "composition", "categoryCode"]);
+        const sanitizedOverrides = Object.keys(overrides || {}).reduce((acc: Record<string, string>, key) => {
+            if (allowedFields.has(key)) {
+                acc[key] = this.toNormalizedCellString((overrides as any)[key]);
+            }
+            return acc;
+        }, {});
+
+        if (Object.keys(sanitizedOverrides).length === 0) {
+            throw new BadRequestException(
+                HttpResponseStatusCodesConstants.BAD_REQUEST_FAILURE,
+                "No valid fields were provided for row update"
+            );
+        }
+
+        const currentPayload: MappedMedicinePayload = {
+            medicineName: row.mappedPayloadJson?.medicineName || "",
+            medicineCode: row.mappedPayloadJson?.medicineCode || "",
+            composition: row.mappedPayloadJson?.composition || "",
+            categoryCode: row.mappedPayloadJson?.categoryCode || ""
+        };
+
+        const updatedPayload: MappedMedicinePayload = {
+            ...currentPayload,
+            ...sanitizedOverrides
+        };
+
+        const categoryCodes = await this.fetchCategoryCodeSet();
+        const existingMedicines = await this.medicineRepository.findAllMedicines();
+        const existingMedicineCodeSet = new Set(existingMedicines.map((medicine) => medicine.medicineCode.toLowerCase()));
+        const existingMedicineNameSet = new Set(existingMedicines.map((medicine) => medicine.medicineName.toLowerCase()));
+
+        const errors = this.validateMappedPayload(
+            updatedPayload,
+            categoryCodes,
+            existingMedicineCodeSet,
+            existingMedicineNameSet,
+            new Set<string>(),
+            job.mode
+        );
+
+        if (updatedPayload.medicineCode) {
+            const hasDuplicateInFile = await this.rowRepository.existsAnotherRowWithMedicineCode(
+                jobId,
+                updatedPayload.medicineCode,
+                rowNumber
+            );
+            if (hasDuplicateInFile) {
+                errors.push({
+                    code: "VAL_DUPLICATE_CODE_IN_FILE",
+                    message: `Duplicate medicineCode '${updatedPayload.medicineCode}' in uploaded file`
+                });
+            }
+        }
+
+        row.mappedPayloadJson = updatedPayload;
+        row.validationStatus = errors.length === 0 ? "VALID" : "INVALID";
+        row.executionStatus = "PENDING";
+        row.errorCodesJson = errors.length > 0 ? errors : null;
+        row.errorMessage = errors.length > 0 ? errors.map((error) => error.message).join(" | ") : null;
+        row.medicineCode = updatedPayload.medicineCode || null;
+        await this.rowRepository.saveRow(row);
+
+        await this.refreshJobValidationSummary(job);
+
+        return {
+            rowId: row.rowId,
+            rowNumber: row.rowNumber,
+            validationStatus: row.validationStatus,
+            executionStatus: row.executionStatus,
+            mappedPayload: row.mappedPayloadJson,
+            errors: row.errorCodesJson || []
+        };
+    }
+
+    public async approveAndStartExecution(jobId: string): Promise<Record<string, any>> {
+        const job = await this.jobRepository.findByJobId(jobId);
+        if (!job) {
+            throw new ResourceNotFoundException(
+                HttpResponseStatusCodesConstants.NOT_FOUND_FAILURE,
+                "Import job not found"
+            );
+        }
+
+        if (job.state !== "REVIEW_REQUIRED" && job.state !== "PARTIAL_SUCCESS") {
+            throw new BadRequestException(
+                HttpResponseStatusCodesConstants.BAD_REQUEST_FAILURE,
+                `Cannot approve import job in '${job.state}' state`
+            );
+        }
+
+        if (job.validRows <= 0) {
+            throw new BadRequestException(
+                HttpResponseStatusCodesConstants.BAD_REQUEST_FAILURE,
+                "No valid rows available for execution"
+            );
+        }
+
+        if (MedicineImportService.runningJobIds.has(jobId)) {
+            throw new BadRequestException(
+                HttpResponseStatusCodesConstants.BAD_REQUEST_FAILURE,
+                "Import job is already running"
+            );
+        }
+
+        job.cancelRequested = false;
+        job.approvedAt = new Date();
+        job.startedAt = null;
+        job.finishedAt = null;
+        job.state = "QUEUED";
+        await this.jobRepository.updateJob(job);
+
+        void this.executeQueuedJob(jobId);
+
+        return {
+            jobId,
+            state: "QUEUED",
+            message: "Import execution has started"
+        };
+    }
+
+    public async cancelJobExecution(jobId: string): Promise<Record<string, any>> {
+        const job = await this.jobRepository.findByJobId(jobId);
+        if (!job) {
+            throw new ResourceNotFoundException(
+                HttpResponseStatusCodesConstants.NOT_FOUND_FAILURE,
+                "Import job not found"
+            );
+        }
+
+        if (!["QUEUED", "RUNNING", "RETRYING"].includes(job.state)) {
+            throw new BadRequestException(
+                HttpResponseStatusCodesConstants.BAD_REQUEST_FAILURE,
+                `Cannot cancel import job in '${job.state}' state`
+            );
+        }
+
+        job.cancelRequested = true;
+        await this.jobRepository.updateJob(job);
+
+        return {
+            jobId,
+            state: job.state,
+            cancelRequested: true,
+            message: "Cancel requested. Running execution will stop safely."
+        };
+    }
+
+    public async retryFailedRows(jobId: string, retryFilter = "FAILED_RETRYABLE"): Promise<Record<string, any>> {
+        const job = await this.jobRepository.findByJobId(jobId);
+        if (!job) {
+            throw new ResourceNotFoundException(
+                HttpResponseStatusCodesConstants.NOT_FOUND_FAILURE,
+                "Import job not found"
+            );
+        }
+
+        if (!["PARTIAL_SUCCESS", "FAILED", "CANCELLED"].includes(job.state)) {
+            throw new BadRequestException(
+                HttpResponseStatusCodesConstants.BAD_REQUEST_FAILURE,
+                `Cannot retry failed rows in '${job.state}' state`
+            );
+        }
+
+        await this.rowRepository.resetRowsForRetry(jobId, retryFilter);
+
+        job.cancelRequested = false;
+        job.finishedAt = null;
+        job.state = "RETRYING";
+        await this.jobRepository.updateJob(job);
+
+        void this.executeQueuedJob(jobId);
+
+        return {
+            jobId,
+            state: "RETRYING",
+            retryFilter,
+            message: "Retry execution has started"
+        };
+    }
+
+    private async executeQueuedJob(jobId: string): Promise<void> {
+        if (MedicineImportService.runningJobIds.has(jobId)) {
+            return;
+        }
+
+        MedicineImportService.runningJobIds.add(jobId);
+
+        try {
+            const job = await this.jobRepository.findByJobId(jobId);
+            if (!job) {
+                return;
+            }
+
+            job.state = "RUNNING";
+            job.startedAt = job.startedAt || new Date();
+            await this.jobRepository.updateJob(job);
+
+            const executableRows = await this.rowRepository.findExecutableRows(jobId);
+
+            for (const row of executableRows) {
+                const currentJob = await this.jobRepository.findByJobId(jobId);
+                if (!currentJob) {
+                    return;
+                }
+
+                if (currentJob.cancelRequested) {
+                    currentJob.state = "CANCELLED";
+                    currentJob.finishedAt = new Date();
+                    await this.jobRepository.updateJob(currentJob);
+                    return;
+                }
+
+                row.executionStatus = "PROCESSING";
+                await this.rowRepository.saveRow(row);
+
+                const payload: MappedMedicinePayload = {
+                    medicineName: row.mappedPayloadJson?.medicineName || "",
+                    medicineCode: row.mappedPayloadJson?.medicineCode || "",
+                    composition: row.mappedPayloadJson?.composition || "",
+                    categoryCode: row.mappedPayloadJson?.categoryCode || ""
+                };
+
+                try {
+                    await this.addOrUpsertMedicine(payload, job.mode);
+                    row.executionStatus = "SUCCESS";
+                    row.errorCodesJson = null;
+                    row.errorMessage = null;
+                } catch (error: any) {
+                    row.retriesAttempted += 1;
+                    const isRetryable = this.isRetryableExecutionError(error);
+                    row.executionStatus = isRetryable ? "FAILED_RETRYABLE" : "FAILED_PERMANENT";
+                    row.errorCodesJson = [{
+                        code: isRetryable ? "EXEC_RETRYABLE" : "EXEC_PERMANENT",
+                        message: error?.message || "Execution failed"
+                    }];
+                    row.errorMessage = error?.message || "Execution failed";
+                }
+
+                await this.rowRepository.saveRow(row);
+            }
+
+            const finalJob = await this.jobRepository.findByJobId(jobId);
+            if (!finalJob) {
+                return;
+            }
+
+            const breakdown = await this.rowRepository.getExecutionBreakdown(jobId);
+            const failedCount = (breakdown.FAILED_RETRYABLE || 0) + (breakdown.FAILED_PERMANENT || 0);
+
+            if (finalJob.cancelRequested) {
+                finalJob.state = "CANCELLED";
+            } else if (failedCount > 0) {
+                finalJob.state = "PARTIAL_SUCCESS";
+            } else {
+                finalJob.state = "SUCCEEDED";
+            }
+            finalJob.finishedAt = new Date();
+            await this.jobRepository.updateJob(finalJob);
+        } catch {
+            const failedJob = await this.jobRepository.findByJobId(jobId);
+            if (failedJob) {
+                failedJob.state = "FAILED";
+                failedJob.finishedAt = new Date();
+                await this.jobRepository.updateJob(failedJob);
+            }
+        } finally {
+            MedicineImportService.runningJobIds.delete(jobId);
+        }
+    }
+
+    private async refreshJobValidationSummary(job: MedicineImportJobSchema): Promise<void> {
+        const validationBreakdown = await this.rowRepository.getValidationBreakdown(job.jobId);
+        const validRows = validationBreakdown.VALID || 0;
+        const warningRows = validationBreakdown.WARNING || 0;
+        const invalidRows = validationBreakdown.INVALID || 0;
+        const totalRows = validRows + warningRows + invalidRows;
+
+        job.totalRows = totalRows;
+        job.validRows = validRows;
+        job.warningRows = warningRows;
+        job.invalidRows = invalidRows;
+        await this.jobRepository.updateJob(job);
+    }
+
+    private isRetryableExecutionError(error: any): boolean {
+        if (error instanceof AbstractException) {
+            return error.statusCode >= HttpResponseStatusCodesConstants.INTERNAL_SERVER_FAILURE;
+        }
+        return true;
     }
 
     private validateUploadMetadata(payload: CreateUploadSessionRequestModel): void {
@@ -486,7 +846,8 @@ export class MedicineImportService {
         categoryCodes: Set<string>,
         existingMedicineCodeSet: Set<string>,
         existingMedicineNameSet: Set<string>,
-        seenMedicineCodes: Set<string>
+        seenMedicineCodes: Set<string>,
+        mode: string = "CREATE_ONLY"
     ): ImportRowErrorModel[] {
         const errors: ImportRowErrorModel[] = [];
 
@@ -518,7 +879,7 @@ export class MedicineImportService {
                     message: `Duplicate medicineCode '${payload.medicineCode}' in uploaded file`
                 });
             }
-            if (existingMedicineCodeSet.has(lowerCode)) {
+            if (mode !== "UPSERT" && existingMedicineCodeSet.has(lowerCode)) {
                 errors.push({
                     code: "VAL_DUPLICATE_CODE_DB",
                     message: `medicineCode '${payload.medicineCode}' already exists`
@@ -526,7 +887,7 @@ export class MedicineImportService {
             }
         }
 
-        if (payload.medicineName && existingMedicineNameSet.has(payload.medicineName.toLowerCase())) {
+        if (mode !== "UPSERT" && payload.medicineName && existingMedicineNameSet.has(payload.medicineName.toLowerCase())) {
             errors.push({
                 code: "VAL_DUPLICATE_NAME_DB",
                 message: `medicineName '${payload.medicineName}' already exists`
@@ -536,13 +897,45 @@ export class MedicineImportService {
         return errors;
     }
 
+    private async addOrUpsertMedicine(payload: MappedMedicinePayload, mode: string): Promise<void> {
+        if (mode === "UPSERT") {
+            const existingByCode = await this.medicineRepository.findMedicineByMedicineCode(payload.medicineCode);
+            if (existingByCode) {
+                await this.medicineService.updateMedicineDetails(payload.medicineCode, {
+                    medicineName: payload.medicineName,
+                    composition: payload.composition,
+                    categoryCode: payload.categoryCode
+                });
+                return;
+            }
+
+            const existingByName = await this.medicineRepository.findMedicineByMedicineName(payload.medicineName);
+            if (existingByName) {
+                await this.medicineService.updateMedicineDetails(existingByName.medicineCode, {
+                    medicineName: payload.medicineName,
+                    composition: payload.composition,
+                    categoryCode: payload.categoryCode
+                });
+                return;
+            }
+        }
+
+        await this.medicineService.addMedicineDetails(payload);
+    }
+
     private async fetchCategoryCodeSet(): Promise<Set<string>> {
         const categories = await this.categoryRepository.find();
         return new Set(categories.map((category) => category.categoryCode.toLowerCase()));
     }
 
-    private sanitizeFileName(fileName: string): string {
-        return fileName.replace(/[^a-zA-Z0-9_.-]/g, "_");
+    private cleanupExpiredUploadBuffers(): void {
+        const now = Date.now();
+        const ttlMs = this.uploadExpiryMinutes * 60 * 1000;
+        for (const [uploadId, value] of MedicineImportService.uploadBufferStore.entries()) {
+            if (now - value.createdAt > ttlMs) {
+                MedicineImportService.uploadBufferStore.delete(uploadId);
+            }
+        }
     }
 
     private toNormalizedCellString(value: ExcelJS.CellValue | undefined): string {

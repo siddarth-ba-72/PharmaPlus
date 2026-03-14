@@ -76,4 +76,50 @@ export class MedicineImportController extends AbstractController {
         );
     });
 
+    public updateJobRow = AsyncRequestHandler.handleRequest(async (req: Request, res: Response): Promise<void> => {
+        const { jobId, rowNumber } = req.params;
+        const rowDetails = await this.medicineImportService.updateJobRow(
+            jobId,
+            Number(rowNumber),
+            req.body?.overrides || {}
+        );
+
+        return this.httpResponse.sendHttpResponse(
+            res,
+            HttpResponseStatusCodesConstants.RETRIEVED_SUCCESS,
+            rowDetails
+        );
+    });
+
+    public approveAndStartExecution = AsyncRequestHandler.handleRequest(async (req: Request, res: Response): Promise<void> => {
+        const { jobId } = req.params;
+        const result = await this.medicineImportService.approveAndStartExecution(jobId);
+        return this.httpResponse.sendHttpResponse(
+            res,
+            HttpResponseStatusCodesConstants.RETRIEVED_SUCCESS,
+            result
+        );
+    });
+
+    public cancelExecution = AsyncRequestHandler.handleRequest(async (req: Request, res: Response): Promise<void> => {
+        const { jobId } = req.params;
+        const result = await this.medicineImportService.cancelJobExecution(jobId);
+        return this.httpResponse.sendHttpResponse(
+            res,
+            HttpResponseStatusCodesConstants.RETRIEVED_SUCCESS,
+            result
+        );
+    });
+
+    public retryFailedRows = AsyncRequestHandler.handleRequest(async (req: Request, res: Response): Promise<void> => {
+        const { jobId } = req.params;
+        const retryFilter = req.body?.retryFilter || "FAILED_RETRYABLE";
+        const result = await this.medicineImportService.retryFailedRows(jobId, retryFilter);
+        return this.httpResponse.sendHttpResponse(
+            res,
+            HttpResponseStatusCodesConstants.RETRIEVED_SUCCESS,
+            result
+        );
+    });
+
 }

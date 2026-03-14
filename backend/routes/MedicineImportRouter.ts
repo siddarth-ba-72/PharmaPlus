@@ -54,6 +54,30 @@ class MedicineImportRoutes {
             this.authMiddleware.authenticateAdmin,
             this.medicineImportController.getJobRows
         );
+
+        this.router.patch(
+            "/jobs/:jobId/rows/:rowNumber",
+            this.authMiddleware.authenticateAdmin,
+            this.medicineImportController.updateJobRow
+        );
+
+        this.router.post(
+            "/jobs/:jobId/approve",
+            this.authMiddleware.authenticateAdmin,
+            this.medicineImportController.approveAndStartExecution
+        );
+
+        this.router.post(
+            "/jobs/:jobId/cancel",
+            this.authMiddleware.authenticateAdmin,
+            this.medicineImportController.cancelExecution
+        );
+
+        this.router.post(
+            "/jobs/:jobId/retry-failed",
+            this.authMiddleware.authenticateAdmin,
+            this.medicineImportController.retryFailedRows
+        );
     }
 
     public getRouter(): Router {

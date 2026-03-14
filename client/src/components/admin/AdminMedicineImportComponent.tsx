@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { AdminService } from '../../services/AdminService'
 
 type UploadMetadata = {
@@ -18,14 +18,24 @@ type PreviewStats = {
     }
 }
 
+type ExecutionStats = {
+    pending: number
+    processing: number
+    success: number
+    failedRetryable: number
+    failedPermanent: number
+}
+
 export const AdminMedicineImportComponent = () => {
     const adminService = useMemo(() => new AdminService(), [])
+    const pollingTimerRef = useRef<number | null>(null)
 
     const [selectedFile, setSelectedFile] = useState<File | null>(null)
     const [uploadMetadata, setUploadMetadata] = useState<UploadMetadata | null>(null)
     const [selectedSheet, setSelectedSheet] = useState<string>('')
     const [selectedHeaderRowIndex, setSelectedHeaderRowIndex] = useState<number>(1)
     const [previewStats, setPreviewStats] = useState<PreviewStats | null>(null)
+    const [executionStats, setExecutionStats] = useState<ExecutionStats | null>(null)
     const [invalidRows, setInvalidRows] = useState<Array<{ rowNumber: number; errors: Array<{ code: string; message: string }> }>>([])
     const [isBusy, setIsBusy] = useState(false)
     const [errorMessage, setErrorMessage] = useState<string>('')
@@ -36,9 +46,15 @@ export const AdminMedicineImportComponent = () => {
         setSelectedFile(file)
         setUploadMetadata(null)
         setPreviewStats(null)
+        setExecutionStats(null)
         setInvalidRows([])
         setErrorMessage('')
         setSuccessMessage('')
+
+        if (pollingTimerRef.current) {
+            window.clearInterval(pollingTimerRef.current)
+            pollingTimerRef.current = null
+        }
     }
 
     const uploadFile = async () => {
@@ -87,11 +103,18 @@ export const AdminMedicineImportComponent = () => {
                 uploadId: uploadMetadata.uploadId,
                 sheetName: selectedSheet || undefined,
                 headerRowIndex: selectedHeaderRowIndex,
-                mode: 'CREATE_ONLY',
+                mode: 'UPSERT',
                 dryRun: true,
             })
 
             setPreviewStats(preview)
+            setExecutionStats({
+                pending: preview.stats.validRows,
+                processing: 0,
+                success: 0,
+                failedRetryable: 0,
+                failedPermanent: 0,
+            })
 
             const invalidPreviewRows = await adminService.getMedicineImportRows(preview.jobId, 'INVALID')
             setInvalidRows(
@@ -108,6 +131,112 @@ export const AdminMedicineImportComponent = () => {
             setIsBusy(false)
         }
     }
+
+    const refreshJobSummary = async (jobId: string) => {
+        const summary = await adminService.getMedicineImportJobSummary(jobId)
+        setPreviewStats({
+            jobId: summary.jobId,
+            state: summary.state,
+            stats: summary.stats,
+        })
+        setExecutionStats(summary.execution)
+
+        const terminalStates = new Set(['SUCCEEDED', 'PARTIAL_SUCCESS', 'FAILED', 'CANCELLED'])
+        if (terminalStates.has(summary.state) && pollingTimerRef.current) {
+            window.clearInterval(pollingTimerRef.current)
+            pollingTimerRef.current = null
+
+            if (summary.state === 'SUCCEEDED') {
+                setSuccessMessage('Medicine import completed successfully.')
+            } else if (summary.state === 'PARTIAL_SUCCESS') {
+                setSuccessMessage('Import finished with some failed rows. Use Retry Failed for retryable rows.')
+            } else if (summary.state === 'CANCELLED') {
+                setSuccessMessage('Import execution was cancelled.')
+            }
+        }
+    }
+
+    const startPollingJobSummary = (jobId: string) => {
+        if (pollingTimerRef.current) {
+            window.clearInterval(pollingTimerRef.current)
+        }
+
+        pollingTimerRef.current = window.setInterval(() => {
+            void refreshJobSummary(jobId)
+        }, 2000)
+    }
+
+    const startImport = async () => {
+        if (!previewStats) {
+            setErrorMessage('Generate preview before starting import.')
+            return
+        }
+
+        setIsBusy(true)
+        setErrorMessage('')
+        setSuccessMessage('')
+
+        try {
+            await adminService.approveAndStartMedicineImport(previewStats.jobId)
+            setSuccessMessage('Import execution started. Tracking progress...')
+            startPollingJobSummary(previewStats.jobId)
+            await refreshJobSummary(previewStats.jobId)
+        } catch (error: any) {
+            setErrorMessage(error?.message || 'Failed to start import execution.')
+        } finally {
+            setIsBusy(false)
+        }
+    }
+
+    const cancelImport = async () => {
+        if (!previewStats) {
+            return
+        }
+
+        setIsBusy(true)
+        setErrorMessage('')
+        setSuccessMessage('')
+
+        try {
+            await adminService.cancelMedicineImport(previewStats.jobId)
+            setSuccessMessage('Cancel requested. Waiting for execution to stop...')
+            await refreshJobSummary(previewStats.jobId)
+        } catch (error: any) {
+            setErrorMessage(error?.message || 'Failed to cancel import execution.')
+        } finally {
+            setIsBusy(false)
+        }
+    }
+
+    const retryFailedRows = async () => {
+        if (!previewStats) {
+            return
+        }
+
+        setIsBusy(true)
+        setErrorMessage('')
+        setSuccessMessage('')
+
+        try {
+            await adminService.retryFailedMedicineImportRows(previewStats.jobId, 'FAILED_RETRYABLE')
+            setSuccessMessage('Retry started for retryable failed rows.')
+            startPollingJobSummary(previewStats.jobId)
+            await refreshJobSummary(previewStats.jobId)
+        } catch (error: any) {
+            setErrorMessage(error?.message || 'Failed to retry failed rows.')
+        } finally {
+            setIsBusy(false)
+        }
+    }
+
+    useEffect(() => {
+        return () => {
+            if (pollingTimerRef.current) {
+                window.clearInterval(pollingTimerRef.current)
+                pollingTimerRef.current = null
+            }
+        }
+    }, [])
 
     return (
         <section className="space-y-4">
@@ -185,7 +314,12 @@ export const AdminMedicineImportComponent = () => {
 
             {previewStats && (
                 <div className="rounded-2xl border border-emerald-200 bg-emerald-50/70 p-5 dark:border-emerald-900/60 dark:bg-emerald-900/20">
-                    <h3 className="text-lg font-semibold text-emerald-900 dark:text-emerald-200">Preview Summary</h3>
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                        <h3 className="text-lg font-semibold text-emerald-900 dark:text-emerald-200">Preview Summary</h3>
+                        <span className="rounded-full bg-white/90 px-3 py-1 text-xs font-bold tracking-wide text-slate-700 dark:bg-slate-900/70 dark:text-slate-200">
+                            State: {previewStats.state}
+                        </span>
+                    </div>
                     <div className="mt-3 grid grid-cols-2 gap-3 text-sm md:grid-cols-4">
                         <div className="rounded-lg bg-white/70 p-3 dark:bg-slate-900/40">
                             <p className="text-slate-500">Total</p>
@@ -203,6 +337,60 @@ export const AdminMedicineImportComponent = () => {
                             <p className="text-slate-500">Invalid</p>
                             <p className="text-xl font-bold text-rose-700 dark:text-rose-300">{previewStats.stats.invalidRows}</p>
                         </div>
+                    </div>
+
+                    {executionStats && (
+                        <div className="mt-3 grid grid-cols-2 gap-3 text-sm md:grid-cols-5">
+                            <div className="rounded-lg bg-white/70 p-3 dark:bg-slate-900/40">
+                                <p className="text-slate-500">Pending</p>
+                                <p className="text-lg font-bold text-slate-900 dark:text-slate-100">{executionStats.pending}</p>
+                            </div>
+                            <div className="rounded-lg bg-white/70 p-3 dark:bg-slate-900/40">
+                                <p className="text-slate-500">Processing</p>
+                                <p className="text-lg font-bold text-sky-700 dark:text-sky-300">{executionStats.processing}</p>
+                            </div>
+                            <div className="rounded-lg bg-white/70 p-3 dark:bg-slate-900/40">
+                                <p className="text-slate-500">Success</p>
+                                <p className="text-lg font-bold text-emerald-700 dark:text-emerald-300">{executionStats.success}</p>
+                            </div>
+                            <div className="rounded-lg bg-white/70 p-3 dark:bg-slate-900/40">
+                                <p className="text-slate-500">Retryable Failed</p>
+                                <p className="text-lg font-bold text-amber-700 dark:text-amber-300">{executionStats.failedRetryable}</p>
+                            </div>
+                            <div className="rounded-lg bg-white/70 p-3 dark:bg-slate-900/40">
+                                <p className="text-slate-500">Permanent Failed</p>
+                                <p className="text-lg font-bold text-rose-700 dark:text-rose-300">{executionStats.failedPermanent}</p>
+                            </div>
+                        </div>
+                    )}
+
+                    <div className="mt-4 flex flex-wrap items-center gap-3">
+                        <button
+                            type="button"
+                            onClick={startImport}
+                            disabled={isBusy || !['REVIEW_REQUIRED', 'PARTIAL_SUCCESS'].includes(previewStats.state)}
+                            className="rounded-lg bg-emerald-700 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-800 disabled:cursor-not-allowed disabled:bg-emerald-400"
+                        >
+                            Start Import
+                        </button>
+
+                        <button
+                            type="button"
+                            onClick={cancelImport}
+                            disabled={isBusy || !['QUEUED', 'RUNNING', 'RETRYING'].includes(previewStats.state)}
+                            className="rounded-lg bg-rose-700 px-4 py-2 text-sm font-semibold text-white transition hover:bg-rose-800 disabled:cursor-not-allowed disabled:bg-rose-400"
+                        >
+                            Cancel Import
+                        </button>
+
+                        <button
+                            type="button"
+                            onClick={retryFailedRows}
+                            disabled={isBusy || !['PARTIAL_SUCCESS', 'FAILED', 'CANCELLED'].includes(previewStats.state)}
+                            className="rounded-lg bg-amber-700 px-4 py-2 text-sm font-semibold text-white transition hover:bg-amber-800 disabled:cursor-not-allowed disabled:bg-amber-400"
+                        >
+                            Retry Failed
+                        </button>
                     </div>
                 </div>
             )}

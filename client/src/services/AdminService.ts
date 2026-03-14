@@ -28,6 +28,20 @@ type PreviewJobResponse = {
     }
 }
 
+type JobSummaryResponse = PreviewJobResponse & {
+    execution: {
+        pending: number
+        processing: number
+        success: number
+        failedRetryable: number
+        failedPermanent: number
+    }
+    cancelRequested?: boolean
+    approvedAt?: string | null
+    startedAt?: string | null
+    finishedAt?: string | null
+}
+
 type PreviewRowsResponse = {
     items: Array<{
         rowId: number
@@ -156,6 +170,60 @@ export class AdminService extends AbstractService {
 
         if (!response.success) {
             throw new Error((response as any).error?.message ?? 'Could not fetch import rows.')
+        }
+
+        return response.data
+    }
+
+    async getMedicineImportJobSummary(jobId: string): Promise<JobSummaryResponse> {
+        const response = await this.get<ResponseDto<JobSummaryResponse>>(
+            `${ApiEndpoints.MEDICINE_IMPORT_JOBS}/${jobId}`,
+        )
+
+        if (!response.success) {
+            throw new Error((response as any).error?.message ?? 'Could not fetch import job summary.')
+        }
+
+        return response.data
+    }
+
+    async approveAndStartMedicineImport(jobId: string): Promise<{ jobId: string; state: string; message: string }> {
+        const response = await this.post<ResponseDto<{ jobId: string; state: string; message: string }>>(
+            `${ApiEndpoints.MEDICINE_IMPORT_JOBS}/${jobId}/approve`,
+            {},
+        )
+
+        if (!response.success) {
+            throw new Error((response as any).error?.message ?? 'Could not start medicine import execution.')
+        }
+
+        return response.data
+    }
+
+    async cancelMedicineImport(jobId: string): Promise<{ jobId: string; state: string; message: string }> {
+        const response = await this.post<ResponseDto<{ jobId: string; state: string; message: string }>>(
+            `${ApiEndpoints.MEDICINE_IMPORT_JOBS}/${jobId}/cancel`,
+            {},
+        )
+
+        if (!response.success) {
+            throw new Error((response as any).error?.message ?? 'Could not cancel medicine import execution.')
+        }
+
+        return response.data
+    }
+
+    async retryFailedMedicineImportRows(
+        jobId: string,
+        retryFilter: 'FAILED_RETRYABLE' | 'FAILED_PERMANENT' = 'FAILED_RETRYABLE',
+    ): Promise<{ jobId: string; state: string; message: string }> {
+        const response = await this.post<ResponseDto<{ jobId: string; state: string; message: string }>, { retryFilter: string }>(
+            `${ApiEndpoints.MEDICINE_IMPORT_JOBS}/${jobId}/retry-failed`,
+            { retryFilter },
+        )
+
+        if (!response.success) {
+            throw new Error((response as any).error?.message ?? 'Could not retry failed medicine import rows.')
         }
 
         return response.data
