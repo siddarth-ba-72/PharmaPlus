@@ -1,25 +1,17 @@
-import { Navigate, Outlet, useLocation } from 'react-router-dom'
+import { Navigate, Outlet } from 'react-router-dom'
 import { useEffect } from 'react'
 import { useAuthStore } from '../store/AuthStore'
 import { useThemeStore } from '../store/ThemeStore'
-import { useToastStore } from '../store/ToastStore'
+import { useUserProfileQuery } from '../shared/queries/AuthQueries'
 import { PharmaPlusAppComponentView } from './PharmaPlusAppComponentView'
 
 const RequireAuthenticatedRoute = () => {
+    const isInitialized = useAuthStore((state) => state.isInitialized)
     const isAuthenticated = useAuthStore((state) => state.isAuthenticated)
-    const showToast = useToastStore((state) => state.showToast)
-    const location = useLocation()
 
-    useEffect(() => {
-        if (isAuthenticated) {
-            return
-        }
-
-        showToast({
-            category: 'fail',
-            message: 'Please login to access this page.',
-        })
-    }, [isAuthenticated, showToast, location.pathname])
+    if (!isInitialized) {
+        return null
+    }
 
     if (!isAuthenticated) {
         return <Navigate to="/pharma-plus/login" replace />
@@ -45,6 +37,8 @@ const RequireAdminRoute = () => {
 
 export const PharmaPlusAppComponent = () => {
     const initializeTheme = useThemeStore((state) => state.initializeTheme)
+
+    useUserProfileQuery()
 
     useEffect(() => {
         initializeTheme()

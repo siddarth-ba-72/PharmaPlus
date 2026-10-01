@@ -4,7 +4,7 @@ import { BannerComponentView } from './BannerComponentView'
 import type { BannerComponentProps, BannerNavItem } from '../../shared/props/PropModels'
 import { useAuthStore } from '../../store/AuthStore'
 import { useThemeStore } from '../../store/ThemeStore'
-import { useLogoutMutation, useUserProfileQuery } from '../../shared/queries/AuthQueries'
+import { useLogoutMutation } from '../../shared/queries/AuthQueries'
 
 export const BannerComponent = () => {
 
@@ -17,8 +17,6 @@ export const BannerComponent = () => {
     const isDarkMode = useThemeStore((state) => state.isDark)
     const toggleTheme = useThemeStore((state) => state.toggleTheme)
     const { mutateAsync: logoutUser } = useLogoutMutation()
-
-    useUserProfileQuery()
 
     const toggleDropdown = (): void => {
         setIsDropdownOpen((isOpen) => !isOpen)
