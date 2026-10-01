@@ -10,6 +10,7 @@ export const BannerComponent = () => {
 
     const navigate = useNavigate()
     const [isDropdownOpen, setIsDropdownOpen] = useState(false)
+    const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
     const isAuthenticated = useAuthStore((state) => state.isAuthenticated)
     const isAdmin = useAuthStore((state) => state.user?.isAdmin ?? false)
     const username = useAuthStore((state) => state.user?.username ?? null)
@@ -22,23 +23,36 @@ export const BannerComponent = () => {
         setIsDropdownOpen((isOpen) => !isOpen)
     }
 
+    const toggleMobileMenu = (): void => {
+        setIsMobileMenuOpen((isOpen) => !isOpen)
+    }
+
+    const handleNavItemClick = (): void => {
+        setIsMobileMenuOpen(false)
+        setIsDropdownOpen(false)
+    }
+
     const handleLogout = async (): Promise<void> => {
         try {
             await logoutUser()
             setIsDropdownOpen(false)
+            setIsMobileMenuOpen(false)
             navigate('/pharma-plus/home', { replace: true })
         } catch {
             setIsDropdownOpen(false)
+            setIsMobileMenuOpen(false)
         }
     }
 
     const handleProfileClick = (): void => {
         setIsDropdownOpen(false)
+        setIsMobileMenuOpen(false)
         navigate('/pharma-plus/profile', { replace: true })
     }
 
     const handleDashboardClick = (): void => {
         setIsDropdownOpen(false)
+        setIsMobileMenuOpen(false)
         navigate('/pharma-plus/admin', { replace: true })
     }
 
@@ -69,7 +83,10 @@ export const BannerComponent = () => {
         firstName,
         navItems,
         isDropdownOpen,
+        isMobileMenuOpen,
         onUserNameClick: toggleDropdown,
+        onNavItemClick: handleNavItemClick,
+        onMobileMenuToggle: toggleMobileMenu,
         onToggleTheme: toggleTheme,
         onDashboardClick: handleDashboardClick,
         onProfileClick: handleProfileClick,

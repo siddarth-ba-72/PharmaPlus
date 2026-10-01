@@ -116,8 +116,62 @@ export const CartComponentView = ({
                     </div>
                 ) : (
                     <>
-                        <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-white/80 dark:border-slate-700 dark:bg-slate-950/80">
-                            <table className="min-w-[620px] w-full border-collapse text-sm">
+                        <div className="space-y-3 sm:hidden">
+                            {items.map((item, index) => (
+                                <div key={`${item.medicineCode}-${index}`} className="rounded-2xl border border-slate-200 bg-white/90 p-4 dark:border-slate-700 dark:bg-slate-950/80">
+                                    <Link
+                                        to={`/pharma-plus/medicines/${item.medicineCode}`}
+                                        className="text-sm font-semibold text-emerald-700 hover:underline dark:text-emerald-300"
+                                    >
+                                        {item.medicine}
+                                    </Link>
+                                    <div className="mt-3 grid grid-cols-2 gap-2 text-xs text-slate-500 dark:text-slate-400">
+                                        <span>Unit price</span>
+                                        <span className="text-right text-slate-700 dark:text-slate-300">{item.unitPrice === null ? 'Unavailable' : formatCurrency(item.unitPrice)}</span>
+                                        <span>Item total</span>
+                                        <span className="text-right font-semibold text-slate-900 dark:text-slate-100">{item.lineTotal === null ? 'Unavailable' : formatCurrency(item.lineTotal)}</span>
+                                    </div>
+                                    <div className="mt-3 flex items-center justify-between gap-3">
+                                        <div className="flex items-center gap-2 text-slate-700 dark:text-slate-300">
+                                            <button
+                                                type="button"
+                                                onClick={() => onDecreaseMedicineQuantity(item.medicineCode)}
+                                                disabled={placingOrder || item.quantity <= 0}
+                                                className="rounded-md border border-slate-300 bg-white px-2 py-0.5 text-sm font-bold text-slate-700 transition hover:border-slate-400 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200"
+                                            >
+                                                -
+                                            </button>
+                                            <span className="min-w-6 text-center text-sm font-semibold">{item.quantity}</span>
+                                            <button
+                                                type="button"
+                                                onClick={() => onIncreaseMedicineQuantity(item.medicineCode)}
+                                                disabled={placingOrder}
+                                                className="rounded-md border border-emerald-300 bg-white px-2 py-0.5 text-sm font-bold text-emerald-700 transition hover:border-emerald-400 disabled:cursor-not-allowed disabled:opacity-50 dark:border-emerald-800 dark:bg-slate-950 dark:text-emerald-300"
+                                            >
+                                                +
+                                            </button>
+                                        </div>
+                                        <button
+                                            type="button"
+                                            onClick={() => onRemoveMedicineFromCart(item.medicineCode)}
+                                            disabled={placingOrder}
+                                            className="rounded-lg border border-rose-300 bg-white px-3 py-1.5 text-xs font-semibold text-rose-700 transition hover:border-rose-400 hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-60 dark:border-rose-800 dark:bg-slate-950 dark:text-rose-300 dark:hover:border-rose-700 dark:hover:bg-rose-950/30"
+                                        >
+                                            Remove
+                                        </button>
+                                    </div>
+                                </div>
+                            ))}
+                            <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 dark:border-slate-700 dark:bg-slate-900/80">
+                                <div className="flex items-center justify-between text-sm font-bold">
+                                    <span className="text-slate-900 dark:text-slate-100">Total</span>
+                                    <span className="text-emerald-700 dark:text-emerald-300">{cartTotal === null ? 'Unavailable' : formatCurrency(cartTotal)}</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="hidden overflow-x-auto rounded-2xl border border-slate-200 bg-white/80 dark:border-slate-700 dark:bg-slate-950/80 sm:block">
+                            <table className="w-full min-w-[620px] border-collapse text-sm">
                                 <thead className="bg-slate-100/90 dark:bg-slate-800/80">
                                     <tr>
                                         <th className="px-4 py-3 text-left font-semibold text-slate-700 dark:text-slate-200">Medicine</th>

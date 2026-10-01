@@ -20,7 +20,10 @@ export interface BannerComponentProps {
     firstName: string | null
     navItems: BannerNavItem[]
     isDropdownOpen: boolean
+    isMobileMenuOpen: boolean
     onUserNameClick: () => void
+    onNavItemClick: () => void
+    onMobileMenuToggle: () => void
     onToggleTheme: () => void
     onDashboardClick: () => void
     onProfileClick: () => void
