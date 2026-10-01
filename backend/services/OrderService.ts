@@ -68,7 +68,15 @@ export class OrderService {
                 );
             }
             const userCartItems: CartSchema[] = await this.cartRepository.findUserCartItemsByUserCode(user.userCode) || [];
+            if (userCartItems.length === 0) {
+                throw new BadRequestException(
+                    HttpResponseStatusCodesConstants.BAD_REQUEST_FAILURE,
+                    "Your cart is empty"
+                );
+            }
             let totalActualPrice = 0;
+            const orderedMedicinePrices: Record<string, number> = {};
+            const orderReq = req.body as OrderRequestModel;
             for (const item of userCartItems) {
                 const itemStock: MedicineStockSchema | null = await this.stockRepository.findMedicineStockByMedicineCode(item.medicine.medicineCode);
                 if (!itemStock) {
@@ -77,9 +85,30 @@ export class OrderService {
                         `Stock not found for medicine code: ${item.medicine.medicineCode}`
                     );
                 }
+                if (itemStock.quantity < item.quantity) {
+                    throw new BadRequestException(
+                        HttpResponseStatusCodesConstants.BAD_REQUEST_FAILURE,
+                        `Insufficient stock for medicine: ${item.medicine.medicineName}`
+                    );
+                }
                 totalActualPrice += (itemStock.price * item.quantity);
+                orderedMedicinePrices[item.medicine.medicineCode] = itemStock.price;
             }
-            const orderReq = req.body as OrderRequestModel;
+            if (orderReq.expectedItems) {
+                const expectedItemsByCode = new Map(orderReq.expectedItems.map((item) => [item.medicineCode, item]));
+                const pricesOrQuantitiesChanged = userCartItems.some((item) => {
+                    const expectedItem = expectedItemsByCode.get(item.medicine.medicineCode);
+                    return !expectedItem
+                        || expectedItem.quantity !== item.quantity
+                        || expectedItem.unitPrice !== orderedMedicinePrices[item.medicine.medicineCode];
+                }) || expectedItemsByCode.size !== userCartItems.length;
+                if (pricesOrQuantitiesChanged) {
+                    throw new BadRequestException(
+                        HttpResponseStatusCodesConstants.BAD_REQUEST_FAILURE,
+                        "Cart prices or quantities have changed. Review your order summary and try again."
+                    );
+                }
+            }
             orderReq.paymentPrice = totalActualPrice;
             const orderMedicineCode = uuidv4().replace(/-/g, "").substring(0, 10).toUpperCase();
 
@@ -90,7 +119,7 @@ export class OrderService {
                     "Could not process the payment"
                 );
             }
-            const newOrderItems: OrderMedicineSchema[] = await this.orderRepository.addNewOrderMedicineItems(userCartItems, user.userCode, orderMedicineCode, transactionCode);
+            const newOrderItems: OrderMedicineSchema[] = await this.orderRepository.addNewOrderMedicineItems(userCartItems, user.userCode, orderMedicineCode, transactionCode, orderedMedicinePrices);
             const newOrder: OrderSchema | null = await this.orderRepository.findOrderByOrderMedicineCode(orderMedicineCode);
             if (!newOrder) {
                 throw new BadRequestException(

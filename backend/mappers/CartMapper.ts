@@ -14,13 +14,16 @@ export class CartMapper {
         return cart;
     }
 
-    public async mapToCartResponse(cartItems: CartSchema[]): Promise<CartResponseModel[]> {
+    public async mapToCartResponse(cartItems: CartSchema[], pricesByMedicineCode: Record<string, number | null>): Promise<CartResponseModel[]> {
         const cartResponse: CartResponseModel[] = [];
         for (const item of cartItems) {
             const cartRes = new CartResponseModel();
             cartRes.medicineCode = item.medicine ? item.medicine.medicineCode : "";
             cartRes.medicine = item.medicine ? item.medicine.medicineName : "";
             cartRes.quantity = item.quantity;
+            const unitPrice = pricesByMedicineCode[cartRes.medicineCode] ?? null;
+            cartRes.unitPrice = unitPrice;
+            cartRes.lineTotal = unitPrice === null ? null : unitPrice * item.quantity;
             cartResponse.push(cartRes);
         }
         return cartResponse;

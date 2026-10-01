@@ -33,7 +33,7 @@ export class CartService {
                 );
             }
             const userCartItems = await this.cartRepository.findUserCartItemsByUserCode(user.userCode) || [];
-            return await this.cartMapper.mapToCartResponse(userCartItems);
+            return await this.mapCartItemsWithPrices(userCartItems);
         } else {
             throw new ResourceNotFoundException(
                 HttpResponseStatusCodesConstants.BAD_REQUEST_FAILURE,
@@ -87,13 +87,27 @@ export class CartService {
             }
 
             userCartItems = await this.cartRepository.findUserCartItemsByUserCode(user.userCode) || [];
-            return await this.cartMapper.mapToCartResponse(userCartItems);
+            return await this.mapCartItemsWithPrices(userCartItems);
         } else {
             throw new ResourceNotFoundException(
                 HttpResponseStatusCodesConstants.BAD_REQUEST_FAILURE,
                 "User not logged in"
             );
         }
+    }
+
+    private async mapCartItemsWithPrices(cartItems: CartSchema[]): Promise<CartResponseModel[]> {
+        const stockEntries = await Promise.all(
+            cartItems.map(async (item) => ({
+                medicineCode: item.medicine.medicineCode,
+                stock: await this.stockRepository.findMedicineStockByMedicineCode(item.medicine.medicineCode),
+            }))
+        );
+        const pricesByMedicineCode = stockEntries.reduce<Record<string, number | null>>((prices, entry) => {
+            prices[entry.medicineCode] = entry.stock?.price ?? null;
+            return prices;
+        }, {});
+        return this.cartMapper.mapToCartResponse(cartItems, pricesByMedicineCode);
     }
 
 }

@@ -7,13 +7,15 @@ import { UserOrderResponseModel } from "../models/OrderHttpModels/UserOrderRespo
 
 export class OrderMapper {
 
-  public async toOrderMedicinesEntityArray(userCartItem: CartSchema[], orderMedicineCode: string): Promise<OrderMedicineSchema[]> {
+  public async toOrderMedicinesEntityArray(userCartItem: CartSchema[], orderMedicineCode: string, orderedMedicinePrices: Record<string, number>): Promise<OrderMedicineSchema[]> {
     const orderMedicines: OrderMedicineSchema[] = [];
     userCartItem.forEach((item: CartSchema) => {
       const orderMedicine: OrderMedicineSchema = new OrderMedicineSchema();
       orderMedicine.order = { orderMedicineCode: orderMedicineCode } as any;
       orderMedicine.medicine = { medicineCode: item.medicine.medicineCode } as any;
       orderMedicine.quantity = item.quantity;
+      orderMedicine.unitPrice = orderedMedicinePrices[item.medicine.medicineCode];
+      orderMedicine.lineTotal = orderMedicine.unitPrice * orderMedicine.quantity;
       orderMedicines.push(orderMedicine);
     });
     return orderMedicines;
@@ -36,9 +38,13 @@ export class OrderMapper {
     const orderMedicinesResponse: OrderMedicineResponseModel[] = [];
     orderItems.forEach((item: OrderMedicineSchema) => {
       const orderMedResponse: OrderMedicineResponseModel = new OrderMedicineResponseModel();
+      const unitPrice = Number(item.unitPrice ?? 0);
+      const quantity = Number(item.quantity ?? 0);
       orderMedResponse.medicineName = item.medicine?.medicineName;
       orderMedResponse.category = item.medicine?.category?.categoryName;
-      orderMedResponse.quantity = item.quantity;
+      orderMedResponse.quantity = quantity;
+      orderMedResponse.unitPrice = unitPrice;
+      orderMedResponse.lineTotal = Number(item.lineTotal ?? 0) || unitPrice * quantity;
       orderMedicinesResponse.push(orderMedResponse);
     });
     orderResponse.medicines = orderMedicinesResponse;
@@ -47,9 +53,16 @@ export class OrderMapper {
 
   public async mapToUserOrderResponseModel(userOrder: OrderSchema, orderMedicines: OrderMedicineSchema[] | null): Promise<UserOrderResponseModel> {
     const userOrderResponse: UserOrderResponseModel = new UserOrderResponseModel();
-    const medicineNames: string[] = [];
-    orderMedicines?.forEach((orderMedicine) => {
-      medicineNames.push(orderMedicine.medicine.medicineName);
+    userOrderResponse.medicines = (orderMedicines ?? []).map((orderMedicine) => {
+      const unitPrice = Number(orderMedicine.unitPrice ?? 0);
+      const quantity = Number(orderMedicine.quantity ?? 0);
+      return {
+        medicineName: orderMedicine.medicine?.medicineName ?? "",
+        category: orderMedicine.medicine?.category?.categoryName ?? "",
+        quantity,
+        unitPrice,
+        totalPrice: Number(orderMedicine.lineTotal ?? 0) || unitPrice * quantity,
+      };
     });
     userOrderResponse.orderNumber = userOrder.orderMedicineCode;
     userOrderResponse.transaction = userOrder.payment?.paymentCode ?? "";
@@ -57,7 +70,6 @@ export class OrderMapper {
     userOrderResponse.totalAmount = userOrder.payment?.paymentPrice ?? 0;
     userOrderResponse.orderDate = userOrder.orderDate;
     userOrderResponse.paymentDate = userOrder.payment?.paymentDate ?? userOrder.orderDate;
-    userOrderResponse.medicines = medicineNames;
     return userOrderResponse;
   }
 

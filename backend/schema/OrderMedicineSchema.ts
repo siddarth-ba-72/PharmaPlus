@@ -19,4 +19,10 @@ export class OrderMedicineSchema {
     @Column({ type: "int" })
     quantity!: number;
 
+    @Column({ type: "int", name: "price", nullable: true, default: 0 })
+    unitPrice!: number;
+
+    @Column({ type: "int", nullable: true, default: 0 })
+    lineTotal!: number;
+
 }

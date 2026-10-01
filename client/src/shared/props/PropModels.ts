@@ -166,7 +166,7 @@ export interface CartComponentViewProps {
     orderResult: OrderResponseDto | null
     onAddressInputChange: (event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void
     onPaymentMethodChange: (method: 'upi' | 'card' | 'cod') => void
-    onPaymentInputChange: (event: ChangeEvent<HTMLInputElement>) => void
+    onPaymentInputChange: (event: ChangeEvent<HTMLInputElement | HTMLSelectElement>) => void
     onProceedToPurchase: () => void
     onContinueToSummary: () => void
     onContinueToPayment: () => void

@@ -20,12 +20,11 @@ export class OrderDaoRepository implements OrderDao {
         this.orderMapper = new OrderMapper();
     }
 
-    public async addNewOrderMedicineItems(userCartItem: CartSchema[], userCode: string, orderMedicineCode: string, transactionCode: string): Promise<OrderMedicineSchema[]> {
+    public async addNewOrderMedicineItems(userCartItem: CartSchema[], userCode: string, orderMedicineCode: string, transactionCode: string, orderedMedicinePrices: Record<string, number>): Promise<OrderMedicineSchema[]> {
         const newOrder = await this.orderMapper.toOrderEntity(orderMedicineCode, userCode, transactionCode);
         await this.orderRepository.save(newOrder);
-        const orderMedicines: OrderMedicineSchema[] = await this.orderMapper.toOrderMedicinesEntityArray(userCartItem, orderMedicineCode);
-        console.log(orderMedicines);
-        orderMedicines.forEach((orderItem) => this.orderMedicineRepository.save(orderItem));
+        const orderMedicines: OrderMedicineSchema[] = await this.orderMapper.toOrderMedicinesEntityArray(userCartItem, orderMedicineCode, orderedMedicinePrices);
+        await Promise.all(orderMedicines.map((orderItem) => this.orderMedicineRepository.save(orderItem)));
         return orderMedicines;
     }
 

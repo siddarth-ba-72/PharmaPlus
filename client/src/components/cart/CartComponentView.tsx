@@ -31,6 +31,19 @@ export const CartComponentView = ({
     onStartNewCheckout,
 }: CartComponentViewProps) => {
     const totalItemUnits = items.reduce((total, item) => total + item.quantity, 0)
+    const expiryOptions = Array.from({ length: 20 * 12 + 1 }, (_, offset) => {
+        const expiryDate = new Date()
+        expiryDate.setDate(1)
+        expiryDate.setMonth(expiryDate.getMonth() + offset)
+        const month = String(expiryDate.getMonth() + 1).padStart(2, '0')
+        const year = expiryDate.getFullYear()
+        return { value: `${month}/${year}`, label: `${month}/${year}` }
+    })
+    const hasCompletePricing = items.every((item) => item.unitPrice !== null && item.lineTotal !== null)
+    const cartTotal = hasCompletePricing
+        ? items.reduce((total, item) => total + (item.lineTotal ?? 0), 0)
+        : null
+    const formatCurrency = (amount: number): string => `Rs. ${amount.toFixed(2)}`
 
     if (loading) {
         return <section className="rounded-2xl border border-slate-200 bg-white/90 p-6 text-sm text-slate-600 shadow dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300">Loading cart items...</section>
@@ -69,11 +82,13 @@ export const CartComponentView = ({
                 ) : (
                     <>
                         <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-white/80 dark:border-slate-700 dark:bg-slate-950/80">
-                            <table className="min-w-[420px] w-full border-collapse text-sm">
+                            <table className="min-w-[620px] w-full border-collapse text-sm">
                                 <thead className="bg-slate-100/90 dark:bg-slate-800/80">
                                     <tr>
                                         <th className="px-4 py-3 text-left font-semibold text-slate-700 dark:text-slate-200">Medicine</th>
                                         <th className="px-4 py-3 text-left font-semibold text-slate-700 dark:text-slate-200">Quantity</th>
+                                        <th className="px-4 py-3 text-right font-semibold text-slate-700 dark:text-slate-200">Unit price</th>
+                                        <th className="px-4 py-3 text-right font-semibold text-slate-700 dark:text-slate-200">Item total</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -88,18 +103,29 @@ export const CartComponentView = ({
                                                 </Link>
                                             </td>
                                             <td className="px-4 py-3 text-slate-700 dark:text-slate-300">{item.quantity}</td>
+                                            <td className="px-4 py-3 text-right text-slate-700 dark:text-slate-300">{item.unitPrice === null ? 'Unavailable' : formatCurrency(item.unitPrice)}</td>
+                                            <td className="px-4 py-3 text-right font-semibold text-slate-900 dark:text-slate-100">{item.lineTotal === null ? 'Unavailable' : formatCurrency(item.lineTotal)}</td>
                                         </tr>
                                     ))}
+                                    <tr className="border-t border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-900/80">
+                                        <td colSpan={3} className="px-4 py-3 text-right font-bold text-slate-900 dark:text-slate-100">Total</td>
+                                        <td className="px-4 py-3 text-right font-bold text-emerald-700 dark:text-emerald-300">{cartTotal === null ? 'Unavailable' : formatCurrency(cartTotal)}</td>
+                                    </tr>
                                 </tbody>
                             </table>
                         </div>
 
                         <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-gradient-to-r from-white to-emerald-50 p-4 dark:border-slate-700 dark:from-slate-900 dark:to-slate-900">
-                            <p className="text-sm text-slate-600 dark:text-slate-300">Ready to continue? Start the 3-step checkout to place your order.</p>
+                            <p className="text-sm text-slate-600 dark:text-slate-300">
+                                {cartTotal === null
+                                    ? 'Pricing is unavailable for one or more items. Please remove unavailable items before checkout.'
+                                    : 'Review item prices and your total before continuing to checkout.'}
+                            </p>
                             <button
                                 type="button"
                                 onClick={onProceedToPurchase}
-                                className="rounded-xl bg-emerald-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700"
+                                disabled={cartTotal === null}
+                                className="rounded-xl bg-emerald-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
                             >
                                 Proceed To Purchase
                             </button>
@@ -170,19 +196,24 @@ export const CartComponentView = ({
                                     <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">Items In This Order</p>
                                     <ul className="mt-3 space-y-2">
                                         {items.map((item) => (
-                                            <li key={item.medicineCode} className="flex items-center justify-between gap-3 text-sm">
+                                            <li key={item.medicineCode} className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 pb-2 text-sm last:border-b-0 dark:border-slate-700">
                                                 <span className="font-medium text-slate-800 dark:text-slate-200">{item.medicine}</span>
-                                                <span className="rounded-md bg-emerald-50 px-2 py-1 text-xs font-semibold text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-200">Qty {item.quantity}</span>
+                                                <span className="text-slate-600 dark:text-slate-300">
+                                                    {item.unitPrice === null || item.lineTotal === null
+                                                        ? 'Price unavailable'
+                                                        : `${item.quantity} × ${formatCurrency(item.unitPrice)} = ${formatCurrency(item.lineTotal)}`}
+                                                </span>
                                             </li>
                                         ))}
                                     </ul>
-                                    <div className="mt-4 border-t border-dashed border-slate-300 pt-3 text-sm text-slate-600 dark:border-slate-700 dark:text-slate-300">
-                                        Total units: <span className="font-bold text-slate-900 dark:text-slate-100">{totalItemUnits}</span>
+                                    <div className="mt-4 flex justify-between border-t border-dashed border-slate-300 pt-3 text-sm text-slate-600 dark:border-slate-700 dark:text-slate-300">
+                                        <span>Total units: <strong className="text-slate-900 dark:text-slate-100">{totalItemUnits}</strong></span>
+                                        <span className="font-bold text-slate-900 dark:text-slate-100">Total: {cartTotal === null ? 'Unavailable' : formatCurrency(cartTotal)}</span>
                                     </div>
                                 </div>
 
-                                <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs font-medium text-amber-800 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-200">
-                                    Final payable amount is calculated by the server at payment step based on current stock pricing.
+                                <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm font-semibold text-emerald-800 dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-200">
+                                    Amount payable: {cartTotal === null ? 'Unavailable' : formatCurrency(cartTotal)}. Prices are verified again before your order is placed.
                                 </div>
 
                                 <div className="flex flex-wrap justify-between gap-3">
@@ -207,6 +238,21 @@ export const CartComponentView = ({
                         {checkoutPhase === 3 && (
                             <div className="space-y-5">
                                 <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100">Phase 3: Payment</h3>
+                                <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 dark:border-emerald-900 dark:bg-emerald-950/40">
+                                    <p className="text-sm font-semibold text-emerald-800 dark:text-emerald-200">Amount to pay</p>
+                                    <p className="mt-1 text-2xl font-bold text-emerald-900 dark:text-emerald-100">
+                                        {cartTotal === null ? 'Unavailable' : formatCurrency(cartTotal)}
+                                    </p>
+                                    <p className="mt-1 text-xs text-emerald-800 dark:text-emerald-300">Includes {items.length} item{items.length === 1 ? '' : 's'} ({totalItemUnits} units).</p>
+                                    <ul className="mt-3 space-y-1 border-t border-emerald-200 pt-3 text-sm dark:border-emerald-800">
+                                        {items.map((item) => (
+                                            <li key={item.medicineCode} className="flex justify-between gap-3 text-emerald-900 dark:text-emerald-100">
+                                                <span>{item.medicine} · {item.quantity} × {item.unitPrice === null ? 'N/A' : formatCurrency(item.unitPrice)}</span>
+                                                <span className="font-semibold">{item.lineTotal === null ? 'N/A' : formatCurrency(item.lineTotal)}</span>
+                                            </li>
+                                        ))}
+                                    </ul>
+                                </div>
 
                                 {orderResult ? (
                                     <div className="rounded-2xl border border-emerald-300 bg-emerald-50 p-5 dark:border-emerald-800 dark:bg-emerald-950/40">
@@ -248,8 +294,29 @@ export const CartComponentView = ({
                                                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                                                     <input name="cardName" value={paymentDetails.cardName} onChange={onPaymentInputChange} placeholder="Name on Card" className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm outline-none ring-emerald-500 focus:ring-2 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 sm:col-span-2" />
                                                     <input name="cardNumber" value={paymentDetails.cardNumber} onChange={onPaymentInputChange} placeholder="1234123412341234" maxLength={16} className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm outline-none ring-emerald-500 focus:ring-2 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 sm:col-span-2" />
-                                                    <input name="cardExpiry" value={paymentDetails.cardExpiry} onChange={onPaymentInputChange} placeholder="MM/YY" maxLength={5} className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm outline-none ring-emerald-500 focus:ring-2 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100" />
-                                                    <input name="cardCvv" value={paymentDetails.cardCvv} onChange={onPaymentInputChange} placeholder="CVV" maxLength={3} className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm outline-none ring-emerald-500 focus:ring-2 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100" />
+                                                    <select
+                                                        name="cardExpiry"
+                                                        value={paymentDetails.cardExpiry}
+                                                        onChange={onPaymentInputChange}
+                                                        aria-label="Card expiry month and year"
+                                                        className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm outline-none ring-emerald-500 focus:ring-2 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
+                                                    >
+                                                        <option value="">Select expiry (MM/YYYY)</option>
+                                                        {expiryOptions.map((option) => (
+                                                            <option key={option.value} value={option.value}>{option.label}</option>
+                                                        ))}
+                                                    </select>
+                                                    <input
+                                                        name="cardCvv"
+                                                        type="password"
+                                                        inputMode="numeric"
+                                                        autoComplete="off"
+                                                        value={paymentDetails.cardCvv}
+                                                        onChange={onPaymentInputChange}
+                                                        placeholder="CVV"
+                                                        maxLength={3}
+                                                        className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm outline-none ring-emerald-500 focus:ring-2 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
+                                                    />
                                                 </div>
                                             )}
 
@@ -288,7 +355,7 @@ export const CartComponentView = ({
                                                 onClick={() => {
                                                     void onPlaceOrder()
                                                 }}
-                                                disabled={placingOrder}
+                                                disabled={placingOrder || cartTotal === null}
                                                 className="rounded-xl bg-emerald-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-70"
                                             >
                                                 {placingOrder ? 'Processing Payment...' : 'Pay & Place Order'}

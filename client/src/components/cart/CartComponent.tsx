@@ -108,8 +108,17 @@ export const CartComponent = () => {
                 return 'Enter a valid 16-digit card number.'
             }
 
-            if (!/^(0[1-9]|1[0-2])\/(\d{2})$/.test(paymentDetails.cardExpiry.trim())) {
-                return 'Enter card expiry as MM/YY.'
+            const expiryMatch = /^(0[1-9]|1[0-2])\/(\d{4})$/.exec(paymentDetails.cardExpiry.trim())
+            if (!expiryMatch) {
+                return 'Select a valid card expiry date.'
+            }
+            const expiryMonth = Number(expiryMatch[1])
+            const expiryYear = Number(expiryMatch[2])
+            const currentDate = new Date()
+            if (expiryYear < currentDate.getFullYear()
+                || (expiryYear === currentDate.getFullYear() && expiryMonth < currentDate.getMonth() + 1)
+                || expiryYear > currentDate.getFullYear() + 20) {
+                return 'Select an expiry date from this month through the next 20 years.'
             }
 
             if (!/^\d{3}$/.test(paymentDetails.cardCvv.trim())) {
@@ -135,19 +144,6 @@ export const CartComponent = () => {
 
         await saveCartMutation.mutateAsync(clearPayload)
         await queryClient.invalidateQueries({ queryKey: cartQueryKeys.userCart })
-    }
-
-    const placeOrderWithFallbackPaymentType = async () => {
-        const primaryCode = paymentMethodToApiCode[selectedPaymentMethod]
-        try {
-            return await orderService.placeOrder({ paymentTypeCode: primaryCode })
-        } catch (error) {
-            if (primaryCode === 'UPI') {
-                throw error
-            }
-
-            return await orderService.placeOrder({ paymentTypeCode: 'UPI' })
-        }
     }
 
     const handleProceedToPurchase = () => {
@@ -196,7 +192,15 @@ export const CartComponent = () => {
             setPaymentProgress(40)
             await new Promise((resolve) => setTimeout(resolve, 250))
             setPaymentProgress(72)
-            const placedOrder = await placeOrderWithFallbackPaymentType()
+            const expectedItems = (userCartQuery.data ?? []).map((item) => ({
+                medicineCode: item.medicineCode,
+                quantity: item.quantity,
+                unitPrice: item.unitPrice ?? 0,
+            }))
+            const placedOrder = await orderService.placeOrder({
+                paymentTypeCode: paymentMethodToApiCode[selectedPaymentMethod],
+                expectedItems,
+            })
             setPaymentProgress(100)
 
             await queryClient.invalidateQueries({ queryKey: cartQueryKeys.userCart })
@@ -215,9 +219,15 @@ export const CartComponent = () => {
                 },
             })
         } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : 'Unable to complete payment and place order.'
+            if (/prices or quantities have changed/i.test(errorMessage)) {
+                await queryClient.invalidateQueries({ queryKey: cartQueryKeys.userCart })
+                await userCartQuery.refetch()
+                setCheckoutPhase(2)
+            }
             showToast({
                 category: 'fail',
-                message: error instanceof Error ? error.message : 'Unable to complete payment and place order.',
+                message: errorMessage,
             })
             setPaymentProgress(0)
         } finally {

@@ -79,9 +79,15 @@ export const ProfileComponentView = (props: ProfileComponentProps) => {
                                         <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Transaction: {order.transaction} • {order.paymentMethod}</p>
                                         <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Ordered: {formatDateTime(order.orderDate)}</p>
                                         <p className="text-xs text-slate-500 dark:text-slate-400">Paid: {formatDateTime(order.paymentDate)}</p>
-                                        <div className="mt-2 flex flex-wrap gap-1">
-                                            {order.medicines.map((medicineName, index) => (
-                                                <span key={`${order.orderNumber}-${index}-${medicineName}`} className="rounded-md bg-slate-100 px-2 py-1 text-xs text-slate-700 dark:bg-slate-800 dark:text-slate-200">{medicineName}</span>
+                                        <div className="mt-2 space-y-2">
+                                            {order.medicines.map((medicine, index) => (
+                                                <div key={`${order.orderNumber}-${medicine.medicineName}-${index}`} className="flex items-center justify-between gap-3 rounded-lg bg-slate-50 px-3 py-2 text-xs text-slate-700 dark:bg-slate-800/70 dark:text-slate-200">
+                                                    <div>
+                                                        <p className="font-semibold text-slate-900 dark:text-slate-100">{medicine.medicineName}</p>
+                                                        <p className="text-[11px] text-slate-500 dark:text-slate-400">{medicine.quantity} × {formatCurrency(medicine.unitPrice)}</p>
+                                                    </div>
+                                                    <span className="font-semibold text-slate-800 dark:text-slate-100">{formatCurrency(medicine.totalPrice)}</span>
+                                                </div>
                                             ))}
                                         </div>
                                     </article>

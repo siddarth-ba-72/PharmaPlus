@@ -3,7 +3,8 @@ export class OrderMedicineResponseModel {
     medicineName!: string;
     category!: string;
     quantity!: number;
-    price!: number;
+    unitPrice!: number;
+    lineTotal!: number;
 
 }
 

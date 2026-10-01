@@ -4,7 +4,7 @@ import { OrderSchema } from "../schema/OrderSchema";
 
 export interface OrderDao {
 
-    addNewOrderMedicineItems(userCartItem: CartSchema[], userCode: string, orderMedicineCode: string, transactionCode: string): Promise<OrderMedicineSchema[]>;
+    addNewOrderMedicineItems(userCartItem: CartSchema[], userCode: string, orderMedicineCode: string, transactionCode: string, orderedMedicinePrices: Record<string, number>): Promise<OrderMedicineSchema[]>;
 
     findOrderByOrderMedicineCode(orderMedicineCode: string): Promise<OrderSchema | null>;
 
