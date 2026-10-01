@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useUserCartQuery } from '../../shared/queries/CartQueries'
 import type { CartComponentViewProps } from '../../shared/props/PropModels'
 import { CartComponentView } from './CartComponentView'
@@ -8,6 +8,7 @@ import { OrderService } from '../../services/OrderService'
 import { useQueryClient } from '@tanstack/react-query'
 import { useCartStore } from '../../store/CartStore'
 import { useNavigate } from 'react-router-dom'
+import type { CartResponseDto } from '../../shared/dto/CartDto'
 
 type PaymentMethod = 'upi' | 'card' | 'cod'
 
@@ -61,6 +62,7 @@ export const CartComponent = () => {
     const navigate = useNavigate()
     const queryClient = useQueryClient()
     const clearCartStore = useCartStore((state) => state.clear)
+    const setCartFromItems = useCartStore((state) => state.setFromItems)
     const showToast = useToastStore((state) => state.showToast)
     const userCartQuery = useUserCartQuery()
     const saveCartMutation = useSaveCartMutation()
@@ -74,6 +76,20 @@ export const CartComponent = () => {
     const [addressValidationError, setAddressValidationError] = useState<string | null>(null)
     const [paymentValidationError, setPaymentValidationError] = useState<string | null>(null)
     const [orderResult, setOrderResult] = useState<CartComponentViewProps['orderResult']>(null)
+    const [draftItems, setDraftItems] = useState<CartResponseDto[]>([])
+    const [savedCartItems, setSavedCartItems] = useState<CartResponseDto[]>([])
+    const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
+
+    useEffect(() => {
+        if (userCartQuery.isLoading || hasUnsavedChanges) {
+            return
+        }
+
+        const cartItems = userCartQuery.data ?? []
+        setDraftItems(cartItems)
+        setSavedCartItems(cartItems)
+        setCartFromItems(cartItems)
+    }, [hasUnsavedChanges, setCartFromItems, userCartQuery.data, userCartQuery.isLoading])
 
     const validateAddressForm = (): string | null => {
         if (!deliveryAddress.fullName.trim()) {
@@ -147,8 +163,13 @@ export const CartComponent = () => {
     }
 
     const handleProceedToPurchase = () => {
-        if ((userCartQuery.data ?? []).length === 0) {
+        if (draftItems.length === 0) {
             showToast({ category: 'warn', message: 'Add items to cart before checkout.' })
+            return
+        }
+
+        if (hasUnsavedChanges) {
+            showToast({ category: 'warn', message: 'Save cart changes before checkout.' })
             return
         }
 
@@ -172,7 +193,7 @@ export const CartComponent = () => {
     }
 
     const handlePlaceOrder = async (): Promise<void> => {
-        if ((userCartQuery.data ?? []).length === 0) {
+        if (draftItems.length === 0) {
             showToast({ category: 'warn', message: 'Cart is empty. Please add items and try again.' })
             return
         }
@@ -184,15 +205,25 @@ export const CartComponent = () => {
         }
 
         setPaymentValidationError(null)
+
+        if (hasUnsavedChanges) {
+            const saveSuccessful = await persistCartChanges(false)
+            if (!saveSuccessful) {
+                setPaymentProgress(0)
+                return
+            }
+        }
+
         setPlacingOrder(true)
         setPaymentProgress(12)
 
         try {
+
             await new Promise((resolve) => setTimeout(resolve, 250))
             setPaymentProgress(40)
             await new Promise((resolve) => setTimeout(resolve, 250))
             setPaymentProgress(72)
-            const expectedItems = (userCartQuery.data ?? []).map((item) => ({
+            const expectedItems = draftItems.map((item) => ({
                 medicineCode: item.medicineCode,
                 quantity: item.quantity,
                 unitPrice: item.unitPrice ?? 0,
@@ -246,12 +277,143 @@ export const CartComponent = () => {
         setOrderResult(null)
     }
 
+    const recalculateLineTotal = (item: CartResponseDto, nextQuantity: number): number | null =>
+        item.unitPrice === null ? null : Number((item.unitPrice * nextQuantity).toFixed(2))
+
+    const handleIncreaseMedicineQuantity = (medicineCode: string): void => {
+        if (!medicineCode || placingOrder) {
+            return
+        }
+
+        setDraftItems((currentItems) =>
+            currentItems.map((item) =>
+                item.medicineCode === medicineCode
+                    ? { ...item, quantity: item.quantity + 1, lineTotal: recalculateLineTotal(item, item.quantity + 1) }
+                    : item,
+            ),
+        )
+        setHasUnsavedChanges(true)
+    }
+
+    const handleDecreaseMedicineQuantity = (medicineCode: string): void => {
+        if (!medicineCode || placingOrder) {
+            return
+        }
+
+        setDraftItems((currentItems) => {
+            const nextItems = currentItems
+                .map((item) => {
+                    if (item.medicineCode !== medicineCode) {
+                        return item
+                    }
+                    const nextQuantity = Math.max(0, item.quantity - 1)
+                    if (nextQuantity === 0) {
+                        return null
+                    }
+                    return { ...item, quantity: nextQuantity, lineTotal: recalculateLineTotal(item, nextQuantity) }
+                })
+                .filter((item): item is CartResponseDto => item !== null)
+
+            if (nextItems.length === 0) {
+                handleStartNewCheckout()
+            }
+
+            return nextItems
+        })
+        setHasUnsavedChanges(true)
+    }
+
+    const handleRemoveMedicineFromCart = (medicineCode: string): void => {
+        if (!medicineCode || placingOrder) {
+            return
+        }
+
+        setDraftItems((currentItems) => {
+            const nextItems = currentItems.filter((item) => item.medicineCode !== medicineCode)
+            if (nextItems.length === 0) {
+                handleStartNewCheckout()
+            }
+
+            return nextItems
+        })
+        setHasUnsavedChanges(true)
+    }
+
+    const handleClearCart = (): void => {
+        if (placingOrder || draftItems.length === 0) {
+            return
+        }
+
+        setDraftItems([])
+        setHasUnsavedChanges(true)
+        handleStartNewCheckout()
+    }
+
+    const handleDiscardCartChanges = (): void => {
+        if (!hasUnsavedChanges || placingOrder) {
+            return
+        }
+
+        setDraftItems(savedCartItems)
+        setHasUnsavedChanges(false)
+    }
+
+    const persistCartChanges = async (showSuccessToast = true): Promise<boolean> => {
+        if (placingOrder) {
+            return false
+        }
+
+        const savedByCode = new Map(savedCartItems.map((item) => [item.medicineCode, item.quantity]))
+        const draftByCode = new Map(draftItems.map((item) => [item.medicineCode, item.quantity]))
+        const medicineCodes = new Set([...savedByCode.keys(), ...draftByCode.keys()])
+        const payload = Array.from(medicineCodes)
+            .map((medicineCode) => ({
+                medicineCode,
+                quantity: draftByCode.get(medicineCode) ?? 0,
+            }))
+            .filter((item) => (savedByCode.get(item.medicineCode) ?? 0) !== item.quantity)
+
+        if (payload.length === 0) {
+            setHasUnsavedChanges(false)
+            if (showSuccessToast) {
+                showToast({ category: 'success', message: 'Cart is already up to date.' })
+            }
+            return true
+        }
+
+        try {
+            await saveCartMutation.mutateAsync(payload)
+            const refreshedCart = await userCartQuery.refetch()
+            const updatedItems = refreshedCart.data ?? []
+            setSavedCartItems(updatedItems)
+            setDraftItems(updatedItems)
+            setHasUnsavedChanges(false)
+            setCartFromItems(updatedItems)
+            if (updatedItems.length === 0) {
+                clearCartStore()
+                handleStartNewCheckout()
+            }
+            if (showSuccessToast) {
+                showToast({ category: 'success', message: 'Cart saved successfully.' })
+            }
+            return true
+        } catch (error) {
+            showToast({
+                category: 'fail',
+                message: error instanceof Error ? error.message : 'Unable to save cart changes.',
+            })
+            return false
+        }
+    }
+
     const cartViewProps: CartComponentViewProps = {
-        items: userCartQuery.data ?? [],
+        items: draftItems,
         loading: userCartQuery.isLoading,
         error: userCartQuery.error instanceof Error && !/empty/i.test(userCartQuery.error.message)
             ? userCartQuery.error.message
             : null,
+        isSavingCart: saveCartMutation.isPending,
+        hasUnsavedChanges,
         checkoutPhase,
         deliveryAddress,
         selectedPaymentMethod,
@@ -292,6 +454,14 @@ export const CartComponent = () => {
         onBackToSummary: () => setCheckoutPhase(2),
         onPlaceOrder: handlePlaceOrder,
         onStartNewCheckout: handleStartNewCheckout,
+        onIncreaseMedicineQuantity: handleIncreaseMedicineQuantity,
+        onDecreaseMedicineQuantity: handleDecreaseMedicineQuantity,
+        onRemoveMedicineFromCart: handleRemoveMedicineFromCart,
+        onClearCart: handleClearCart,
+        onSaveCart: async () => {
+            await persistCartChanges(true)
+        },
+        onDiscardCartChanges: handleDiscardCartChanges,
     }
 
     return <CartComponentView {...cartViewProps} />

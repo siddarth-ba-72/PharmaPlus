@@ -10,6 +10,8 @@ export const CartComponentView = ({
     items,
     loading,
     error,
+    isSavingCart,
+    hasUnsavedChanges,
     checkoutPhase,
     deliveryAddress,
     selectedPaymentMethod,
@@ -29,6 +31,12 @@ export const CartComponentView = ({
     onBackToSummary,
     onPlaceOrder,
     onStartNewCheckout,
+    onIncreaseMedicineQuantity,
+    onDecreaseMedicineQuantity,
+    onRemoveMedicineFromCart,
+    onClearCart,
+    onSaveCart,
+    onDiscardCartChanges,
 }: CartComponentViewProps) => {
     const totalItemUnits = items.reduce((total, item) => total + item.quantity, 0)
     const expiryOptions = Array.from({ length: 20 * 12 + 1 }, (_, offset) => {
@@ -72,6 +80,33 @@ export const CartComponentView = ({
                 {items.length === 0 ? (
                     <div className="rounded-2xl border border-slate-200 bg-white/80 p-5 text-sm text-slate-500 dark:border-slate-700 dark:bg-slate-950/80 dark:text-slate-400">
                         <p>Your cart is empty.</p>
+                        {hasUnsavedChanges ? (
+                            <>
+                                <p className="mt-3 text-sm font-bold text-amber-700 dark:text-amber-300">
+                                    You have unsaved cart changes. Click Save Cart before checkout.
+                                </p>
+                                <div className="mt-3 flex flex-wrap gap-2">
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            void onSaveCart()
+                                        }}
+                                        disabled={placingOrder || isSavingCart}
+                                        className="rounded-xl border border-emerald-300 bg-white px-4 py-2.5 text-sm font-semibold text-emerald-700 transition hover:border-emerald-400 hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-60 dark:border-emerald-800 dark:bg-slate-950 dark:text-emerald-300 dark:hover:border-emerald-700 dark:hover:bg-emerald-950/20"
+                                    >
+                                        {isSavingCart ? 'Saving...' : 'Save Cart'}
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={onDiscardCartChanges}
+                                        disabled={placingOrder || isSavingCart}
+                                        className="rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:border-slate-400 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200 dark:hover:border-slate-600 dark:hover:bg-slate-900"
+                                    >
+                                        Discard
+                                    </button>
+                                </div>
+                            </>
+                        ) : null}
                         <Link
                             to="/pharma-plus/medicines"
                             className="mt-3 inline-flex rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-700"
@@ -89,6 +124,7 @@ export const CartComponentView = ({
                                         <th className="px-4 py-3 text-left font-semibold text-slate-700 dark:text-slate-200">Quantity</th>
                                         <th className="px-4 py-3 text-right font-semibold text-slate-700 dark:text-slate-200">Unit price</th>
                                         <th className="px-4 py-3 text-right font-semibold text-slate-700 dark:text-slate-200">Item total</th>
+                                        <th className="px-4 py-3 text-right font-semibold text-slate-700 dark:text-slate-200">Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -102,13 +138,43 @@ export const CartComponentView = ({
                                                     {item.medicine}
                                                 </Link>
                                             </td>
-                                            <td className="px-4 py-3 text-slate-700 dark:text-slate-300">{item.quantity}</td>
+                                            <td className="px-4 py-3">
+                                                <div className="flex items-center gap-2 text-slate-700 dark:text-slate-300">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => onDecreaseMedicineQuantity(item.medicineCode)}
+                                                        disabled={placingOrder || item.quantity <= 0}
+                                                        className="rounded-md border border-slate-300 bg-white px-2 py-0.5 text-sm font-bold text-slate-700 transition hover:border-slate-400 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200"
+                                                    >
+                                                        -
+                                                    </button>
+                                                    <span className="min-w-6 text-center">{item.quantity}</span>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => onIncreaseMedicineQuantity(item.medicineCode)}
+                                                        disabled={placingOrder}
+                                                        className="rounded-md border border-emerald-300 bg-white px-2 py-0.5 text-sm font-bold text-emerald-700 transition hover:border-emerald-400 disabled:cursor-not-allowed disabled:opacity-50 dark:border-emerald-800 dark:bg-slate-950 dark:text-emerald-300"
+                                                    >
+                                                        +
+                                                    </button>
+                                                </div>
+                                            </td>
                                             <td className="px-4 py-3 text-right text-slate-700 dark:text-slate-300">{item.unitPrice === null ? 'Unavailable' : formatCurrency(item.unitPrice)}</td>
                                             <td className="px-4 py-3 text-right font-semibold text-slate-900 dark:text-slate-100">{item.lineTotal === null ? 'Unavailable' : formatCurrency(item.lineTotal)}</td>
+                                            <td className="px-4 py-3 text-right">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => onRemoveMedicineFromCart(item.medicineCode)}
+                                                    disabled={placingOrder}
+                                                    className="rounded-lg border border-rose-300 bg-white px-3 py-1.5 text-xs font-semibold text-rose-700 transition hover:border-rose-400 hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-60 dark:border-rose-800 dark:bg-slate-950 dark:text-rose-300 dark:hover:border-rose-700 dark:hover:bg-rose-950/30"
+                                                >
+                                                    Remove
+                                                </button>
+                                            </td>
                                         </tr>
                                     ))}
                                     <tr className="border-t border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-900/80">
-                                        <td colSpan={3} className="px-4 py-3 text-right font-bold text-slate-900 dark:text-slate-100">Total</td>
+                                        <td colSpan={4} className="px-4 py-3 text-right font-bold text-slate-900 dark:text-slate-100">Total</td>
                                         <td className="px-4 py-3 text-right font-bold text-emerald-700 dark:text-emerald-300">{cartTotal === null ? 'Unavailable' : formatCurrency(cartTotal)}</td>
                                     </tr>
                                 </tbody>
@@ -121,15 +187,50 @@ export const CartComponentView = ({
                                     ? 'Pricing is unavailable for one or more items. Please remove unavailable items before checkout.'
                                     : 'Review item prices and your total before continuing to checkout.'}
                             </p>
-                            <button
-                                type="button"
-                                onClick={onProceedToPurchase}
-                                disabled={cartTotal === null}
-                                className="rounded-xl bg-emerald-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
-                            >
-                                Proceed To Purchase
-                            </button>
+                            <div className="flex flex-wrap gap-2">
+                                <button
+                                    type="button"
+                                    onClick={onClearCart}
+                                    disabled={placingOrder}
+                                    className="rounded-xl border border-rose-300 bg-white px-4 py-2.5 text-sm font-semibold text-rose-700 transition hover:border-rose-400 hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-60 dark:border-rose-800 dark:bg-slate-950 dark:text-rose-300 dark:hover:border-rose-700 dark:hover:bg-rose-950/30"
+                                >
+                                    Clear Cart
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        void onSaveCart()
+                                    }}
+                                    disabled={placingOrder || isSavingCart || !hasUnsavedChanges}
+                                    className="rounded-xl border border-emerald-300 bg-white px-4 py-2.5 text-sm font-semibold text-emerald-700 transition hover:border-emerald-400 hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-60 dark:border-emerald-800 dark:bg-slate-950 dark:text-emerald-300 dark:hover:border-emerald-700 dark:hover:bg-emerald-950/20"
+                                >
+                                    {isSavingCart ? 'Saving...' : 'Save Cart'}
+                                </button>
+                                {hasUnsavedChanges ? (
+                                    <button
+                                        type="button"
+                                        onClick={onDiscardCartChanges}
+                                        disabled={placingOrder || isSavingCart}
+                                        className="rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:border-slate-400 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200 dark:hover:border-slate-600 dark:hover:bg-slate-900"
+                                    >
+                                        Discard
+                                    </button>
+                                ) : null}
+                                <button
+                                    type="button"
+                                    onClick={onProceedToPurchase}
+                                    disabled={cartTotal === null || placingOrder || isSavingCart}
+                                    className="rounded-xl bg-emerald-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
+                                >
+                                    Proceed To Purchase
+                                </button>
+                            </div>
                         </div>
+                        {hasUnsavedChanges ? (
+                            <p className="mt-2 text-sm font-bold text-amber-700 dark:text-amber-300">
+                                You have unsaved cart changes. Click Save Cart before checkout.
+                            </p>
+                        ) : null}
                     </>
                 )}
 

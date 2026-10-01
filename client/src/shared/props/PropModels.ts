@@ -162,6 +162,8 @@ export interface CartComponentViewProps {
     items: CartResponseDto[]
     loading: boolean
     error: string | null
+    isSavingCart: boolean
+    hasUnsavedChanges: boolean
     checkoutPhase: 1 | 2 | 3
     deliveryAddress: {
         fullName: string
@@ -196,4 +198,10 @@ export interface CartComponentViewProps {
     onBackToSummary: () => void
     onPlaceOrder: () => Promise<void>
     onStartNewCheckout: () => void
+    onIncreaseMedicineQuantity: (medicineCode: string) => void
+    onDecreaseMedicineQuantity: (medicineCode: string) => void
+    onRemoveMedicineFromCart: (medicineCode: string) => void
+    onClearCart: () => void
+    onSaveCart: () => Promise<void>
+    onDiscardCartChanges: () => void
 }
