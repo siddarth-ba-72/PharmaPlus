@@ -22,13 +22,14 @@ export class StockController extends AbstractController {
         const medicineStocks = await this.stockService.fetchAllMedicinesWithStock();
         if (medicineStocks.length === 0) {
             this.logger.logInfo("Stocks are empty for all the medicines");
-            this.httpResponse.sendHttpResponse(
-                res, HttpResponseStatusCodesConstants.NO_CONTENT_SUCCESS, {
-                message: "Stocks are empty for all the medicines"
+            return this.httpResponse.sendHttpResponse(
+                res, HttpResponseStatusCodesConstants.RETRIEVED_SUCCESS, {
+                message: "Stocks are empty for all the medicines",
+                medicineStocks: []
             });
         } else {
             this.logger.logInfo(`Found ${medicineStocks.length} medicines with active stocks`);
-            this.httpResponse.sendHttpResponse(
+            return this.httpResponse.sendHttpResponse(
                 res, HttpResponseStatusCodesConstants.RETRIEVED_SUCCESS, {
                 medicineStocks
             });

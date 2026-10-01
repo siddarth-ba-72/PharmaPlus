@@ -21,9 +21,10 @@ import { MedicineImportRowSchema } from "../schema/MedicineImportRowSchema";
 import { MedicineCategorySchema } from "../schema/MedicineCategorySchema";
 import { DatabaseConnectionConfig } from "../config/DatabaseConnectionConfig";
 import { MedicineDaoRepository } from "../repository/MedicineDaoRepository";
+import { StockDaoRepository } from "../repository/StockDaoRepository";
 import { MedicineService } from "./MedicineService";
 
-type HeaderMap = Record<string, "medicineName" | "medicineCode" | "composition" | "categoryCode">;
+type HeaderMap = Record<string, "medicineName" | "medicineCode" | "composition" | "categoryCode" | "price" | "quantity" | "mfgDate" | "expDate">;
 
 export class MedicineImportService {
 
@@ -34,6 +35,7 @@ export class MedicineImportService {
     private jobRepository: MedicineImportJobRepository;
     private rowRepository: MedicineImportRowRepository;
     private medicineRepository: MedicineDaoRepository;
+    private stockRepository: StockDaoRepository;
     private medicineService: MedicineService;
     private categoryRepository: Repository<MedicineCategorySchema>;
     private readonly uploadExpiryMinutes: number;
@@ -44,6 +46,7 @@ export class MedicineImportService {
         this.jobRepository = new MedicineImportJobRepository();
         this.rowRepository = new MedicineImportRowRepository();
         this.medicineRepository = new MedicineDaoRepository();
+        this.stockRepository = new StockDaoRepository();
         this.medicineService = new MedicineService();
         this.categoryRepository = DatabaseConnectionConfig
             .getInstance()
@@ -761,14 +764,18 @@ export class MedicineImportService {
         headerMap: HeaderMap;
         mappingDecisions: MappingDecisionModel[];
     } {
-        const synonyms: Record<string, Array<HeaderMap[keyof HeaderMap]>> = {
+        const synonyms: Record<string, string[]> = {
             medicineName: ["medicineName"],
             medicineCode: ["medicineCode"],
             composition: ["composition"],
-            categoryCode: ["categoryCode"]
+            categoryCode: ["categoryCode"],
+            price: ["price", "mrp", "unitprice"],
+            quantity: ["quantity", "qty", "stock", "availableqty"],
+            mfgDate: ["mfgDate", "manufacturedate", "mfgdate"],
+            expDate: ["expDate", "expirydate", "expirationdate", "expdate"]
         };
 
-        const synonymLookup: Record<string, HeaderMap[keyof HeaderMap]> = {
+        const synonymLookup: Record<string, string> = {
             medicinename: "medicineName",
             name: "medicineName",
             productname: "medicineName",
@@ -783,7 +790,20 @@ export class MedicineImportService {
             salts: "composition",
             categorycode: "categoryCode",
             category: "categoryCode",
-            catcode: "categoryCode"
+            catcode: "categoryCode",
+            price: "price",
+            mrp: "price",
+            unitprice: "price",
+            quantity: "quantity",
+            qty: "quantity",
+            stock: "quantity",
+            availableqty: "quantity",
+            mfgdate: "mfgDate",
+            manufacturedate: "mfgDate",
+            manufacturingdate: "mfgDate",
+            expdate: "expDate",
+            expirydate: "expDate",
+            expirationdate: "expDate"
         };
 
         const mappedTargets = new Set<string>();
@@ -792,7 +812,7 @@ export class MedicineImportService {
 
         headers.forEach((header, index) => {
             const compactHeader = header.replace(/[^a-zA-Z0-9]/g, "").toLowerCase();
-            const mappedTarget = synonymLookup[compactHeader];
+            const mappedTarget = synonymLookup[compactHeader] as HeaderMap[keyof HeaderMap] | undefined;
 
             if (mappedTarget && !mappedTargets.has(mappedTarget)) {
                 headerMap[(index + 1).toString()] = mappedTarget;
@@ -835,7 +855,26 @@ export class MedicineImportService {
         Object.keys(headerMap).forEach((columnIndexString) => {
             const columnIndex = Number(columnIndexString);
             const targetField = headerMap[columnIndexString];
-            mappedPayload[targetField] = this.toNormalizedCellString(rowValues[columnIndex]);
+            const rawValue = rowValues[columnIndex];
+
+            if (targetField === "price") {
+                mappedPayload.price = this.parseOptionalNumber(rawValue);
+                return;
+            }
+            if (targetField === "quantity") {
+                mappedPayload.quantity = this.parseOptionalNumber(rawValue);
+                return;
+            }
+            if (targetField === "mfgDate") {
+                mappedPayload.mfgDate = this.parseOptionalDate(rawValue);
+                return;
+            }
+            if (targetField === "expDate") {
+                mappedPayload.expDate = this.parseOptionalDate(rawValue);
+                return;
+            }
+
+            mappedPayload[targetField] = this.toNormalizedCellString(rawValue);
         });
 
         return mappedPayload;
@@ -871,6 +910,34 @@ export class MedicineImportService {
             });
         }
 
+        if (payload.price !== undefined && (!Number.isFinite(payload.price) || payload.price <= 0)) {
+            errors.push({
+                code: "VAL_INVALID_PRICE",
+                message: `price '${payload.price}' must be a positive number`
+            });
+        }
+
+        if (payload.quantity !== undefined && (!Number.isFinite(payload.quantity) || payload.quantity <= 0)) {
+            errors.push({
+                code: "VAL_INVALID_QUANTITY",
+                message: `quantity '${payload.quantity}' must be a positive number`
+            });
+        }
+
+        if (payload.mfgDate && Number.isNaN(new Date(payload.mfgDate as any).getTime())) {
+            errors.push({
+                code: "VAL_INVALID_MFG_DATE",
+                message: `mfgDate '${payload.mfgDate}' is not a valid date`
+            });
+        }
+
+        if (payload.expDate && Number.isNaN(new Date(payload.expDate as any).getTime())) {
+            errors.push({
+                code: "VAL_INVALID_EXP_DATE",
+                message: `expDate '${payload.expDate}' is not a valid date`
+            });
+        }
+
         if (payload.medicineCode) {
             const lowerCode = payload.medicineCode.toLowerCase();
             if (seenMedicineCodes.has(lowerCode)) {
@@ -898,6 +965,8 @@ export class MedicineImportService {
     }
 
     private async addOrUpsertMedicine(payload: MappedMedicinePayload, mode: string): Promise<void> {
+        let medicineCode = payload.medicineCode;
+
         if (mode === "UPSERT") {
             const existingByCode = await this.medicineRepository.findMedicineByMedicineCode(payload.medicineCode);
             if (existingByCode) {
@@ -906,6 +975,8 @@ export class MedicineImportService {
                     composition: payload.composition,
                     categoryCode: payload.categoryCode
                 });
+                medicineCode = payload.medicineCode;
+                await this.persistImportedStock(medicineCode, payload);
                 return;
             }
 
@@ -916,16 +987,62 @@ export class MedicineImportService {
                     composition: payload.composition,
                     categoryCode: payload.categoryCode
                 });
+                medicineCode = existingByName.medicineCode;
+                await this.persistImportedStock(medicineCode, payload);
                 return;
             }
         }
 
-        await this.medicineService.addMedicineDetails(payload);
+        const createdMedicine = await this.medicineService.addMedicineDetails(payload);
+        medicineCode = createdMedicine.medicineCode;
+        await this.persistImportedStock(medicineCode, payload);
     }
 
     private async fetchCategoryCodeSet(): Promise<Set<string>> {
         const categories = await this.categoryRepository.find();
         return new Set(categories.map((category) => category.categoryCode.toLowerCase()));
+    }
+
+    private async persistImportedStock(medicineCode: string, payload: MappedMedicinePayload): Promise<void> {
+        const price = typeof payload.price === "number" ? payload.price : Number(payload.price ?? NaN);
+        const quantity = typeof payload.quantity === "number" ? payload.quantity : Number(payload.quantity ?? NaN);
+
+        if (!Number.isFinite(price) || !Number.isFinite(quantity) || price <= 0 || quantity <= 0) {
+            return;
+        }
+
+        const stockRequest: any = {
+            medicineCode,
+            price,
+            quantity,
+        };
+
+        if (payload.mfgDate) {
+            stockRequest.mfgDate = new Date(payload.mfgDate as any);
+        }
+
+        if (payload.expDate) {
+            stockRequest.expDate = new Date(payload.expDate as any);
+        }
+
+        const existingStock = this.stockRepository.findMedicineStockByMedicineCode
+            ? await this.stockRepository.findMedicineStockByMedicineCode(medicineCode)
+            : null;
+
+        if (existingStock) {
+            existingStock.price = price;
+            existingStock.quantity = quantity;
+            if (payload.mfgDate) {
+                existingStock.mfgDate = new Date(payload.mfgDate as any);
+            }
+            if (payload.expDate) {
+                existingStock.expDate = new Date(payload.expDate as any);
+            }
+            await (this.stockRepository as any).stockRepository.save(existingStock);
+            return;
+        }
+
+        await this.stockRepository.saveMedicineStock(stockRequest);
     }
 
     private cleanupExpiredUploadBuffers(): void {
@@ -936,6 +1053,26 @@ export class MedicineImportService {
                 MedicineImportService.uploadBufferStore.delete(uploadId);
             }
         }
+    }
+
+    private parseOptionalNumber(value: ExcelJS.CellValue | undefined): number | undefined {
+        const normalized = this.toNormalizedCellString(value);
+        if (!normalized) {
+            return undefined;
+        }
+
+        const parsed = Number(normalized.replace(/,/g, ""));
+        return Number.isFinite(parsed) ? parsed : undefined;
+    }
+
+    private parseOptionalDate(value: ExcelJS.CellValue | undefined): Date | string | undefined {
+        const normalized = this.toNormalizedCellString(value);
+        if (!normalized) {
+            return undefined;
+        }
+
+        const parsed = new Date(normalized);
+        return Number.isNaN(parsed.getTime()) ? undefined : parsed;
     }
 
     private toNormalizedCellString(value: ExcelJS.CellValue | undefined): string {

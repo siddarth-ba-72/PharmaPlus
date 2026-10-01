@@ -3,7 +3,8 @@
 
 .vscode/
 Query.sql
-src/config/config.env
+backend/.env
+backend/config/config.env
 
 ### Node ###
 # Logs
@@ -144,5 +145,7 @@ dist
 
 # SvelteKit build / generate output
 .svelte-kit
+
+docs/*
 
 # End of https://www.toptal.com/developers/gitignore/api/node

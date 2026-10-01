@@ -10,6 +10,8 @@ export class StockMapper {
         stock.medicine = { medicineCode: stockReq.medicineCode } as any;
         stock.quantity = stockReq.quantity;
         stock.price = stockReq.price;
+        stock.mfgDate = stockReq.mfgDate ? new Date(stockReq.mfgDate as any) : stock.mfgDate;
+        stock.expDate = stockReq.expDate ? new Date(stockReq.expDate as any) : stock.expDate;
         return stock;
     }
 

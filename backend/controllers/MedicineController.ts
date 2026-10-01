@@ -24,9 +24,9 @@ export class MedicineController extends AbstractController {
         if (medicines.length === 0) {
             this.logger.logInfo("No medicines found");
             return this.httpResponse.sendHttpResponse(
-                res, HttpResponseStatusCodesConstants.NO_CONTENT_SUCCESS, {
+                res, HttpResponseStatusCodesConstants.RETRIEVED_SUCCESS, {
                 message: "No medicines found",
-                medicines: null
+                medicines: []
             });
         } else {
             this.logger.logInfo(`Found ${medicines.length} medicines`);

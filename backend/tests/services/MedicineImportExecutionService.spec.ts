@@ -65,4 +65,32 @@ describe("MedicineImportService execution controls", () => {
         expect(updateJob).toHaveBeenCalled();
         expect(result.state).toBe("RETRYING");
     });
+
+    it("creates stock records when the excel row includes price and quantity", async () => {
+        const service = new MedicineImportService();
+        const saveStock = jest.fn().mockResolvedValue({ stockId: 1 });
+
+        (service as any).stockRepository = { saveMedicineStock: saveStock };
+        (service as any).medicineService = {
+            addMedicineDetails: jest.fn().mockResolvedValue({ medicineCode: "PCM500" }),
+            updateMedicineDetails: jest.fn(),
+        };
+
+        await (service as any).addOrUpsertMedicine({
+            medicineName: "Paracetamol 500mg Tablet",
+            medicineCode: "PCM500",
+            composition: "Paracetamol 500mg",
+            categoryCode: "PAIN",
+            price: 120,
+            quantity: 40,
+            mfgDate: "2025-01-10",
+            expDate: "2027-01-10"
+        }, "CREATE_ONLY");
+
+        expect(saveStock).toHaveBeenCalledWith(expect.objectContaining({
+            medicineCode: "PCM500",
+            price: 120,
+            quantity: 40,
+        }));
+    });
 });

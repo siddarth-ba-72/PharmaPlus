@@ -14,6 +14,7 @@ export class DatabaseConnectionConfig {
     private constructor() {
         this.dataSource = new DataSource({
             type: "postgres",
+            url: PropertyConstants.DATABASE_URL || undefined,
             host: PropertyConstants.DATABASE_HOST,
             port: PropertyConstants.DATABASE_PORT,
             username: PropertyConstants.DATABASE_USERNAME,
@@ -21,6 +22,7 @@ export class DatabaseConnectionConfig {
             database: PropertyConstants.DATABASE_SCHEMA,
             synchronize: true,
             logging: true,
+            ssl: { rejectUnauthorized: false },
             logger: new QueryLogger(),
             entities: ["backend/schema/*.ts"]
         });

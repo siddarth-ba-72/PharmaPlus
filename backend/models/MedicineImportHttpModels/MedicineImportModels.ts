@@ -18,6 +18,10 @@ export interface MappedMedicinePayload {
     medicineCode: string;
     composition: string;
     categoryCode: string;
+    price?: number;
+    quantity?: number;
+    mfgDate?: Date | string;
+    expDate?: Date | string;
 }
 
 export interface ImportRowErrorModel {
