@@ -4,9 +4,11 @@ type ToastComponentViewProps = {
     category: ToastCategory
     message: string
     onClose: () => void
+    actionLabel?: string
+    onAction?: () => void
 }
 
-export const ToastComponentView = ({ category, message, onClose }: ToastComponentViewProps) => {
+export const ToastComponentView = ({ category, message, onClose, actionLabel, onAction }: ToastComponentViewProps) => {
     const themeClasses = {
         success: 'border-emerald-300 bg-emerald-50 text-emerald-900 dark:border-emerald-700 dark:bg-emerald-950/70 dark:text-emerald-100',
         warn: 'border-amber-300 bg-amber-50 text-amber-900 dark:border-amber-700 dark:bg-amber-950/70 dark:text-amber-100',
@@ -20,13 +22,24 @@ export const ToastComponentView = ({ category, message, onClose }: ToastComponen
             aria-live="polite"
         >
             <p className="m-0 flex-1 text-sm font-semibold">{message}</p>
-            <button
-                type="button"
-                className="rounded-lg border border-current px-3 py-1 text-xs font-bold opacity-90 transition hover:opacity-100"
-                onClick={onClose}
-            >
-                Cancel
-            </button>
+            <div className="flex items-center gap-2">
+                {onAction && (
+                    <button
+                        type="button"
+                        className="rounded-lg border border-current bg-current/10 px-3 py-1 text-xs font-bold opacity-90 transition hover:opacity-100"
+                        onClick={onAction}
+                    >
+                        {actionLabel ?? 'View'}
+                    </button>
+                )}
+                <button
+                    type="button"
+                    className="rounded-lg border border-current px-3 py-1 text-xs font-bold opacity-90 transition hover:opacity-100"
+                    onClick={onClose}
+                >
+                    Cancel
+                </button>
+            </div>
         </div>
     )
 }

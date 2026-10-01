@@ -41,7 +41,7 @@ export class CartController extends AbstractController {
         let userCartItems: CartResponseModel[] = await this.cartService.manageUserCart(req) || [];
         return this.httpResponse.sendHttpResponse(
             res, HttpResponseStatusCodesConstants.CREATED_SUCCESS, {
-            message: `Cart updated successfully for user: ${req.body.user.username}`,
+            message: "Cart updated successfully",
             userCartItems
         });
     });

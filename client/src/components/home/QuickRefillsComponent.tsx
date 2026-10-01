@@ -77,7 +77,12 @@ export const QuickRefillsComponent = () => {
         try {
             const message = await saveCartMutation.mutateAsync([{ medicineCode, quantity: newQuantity }])
             setSelectedQuantities((current) => ({ ...current, [medicineCode]: 0 }))
-            showToast({ category: 'success', message })
+            showToast({
+                category: 'success',
+                message,
+                actionLabel: 'Go to Cart',
+                onAction: () => navigate('/pharma-plus/cart'),
+            })
         } catch (error) {
             showToast({
                 category: 'fail',

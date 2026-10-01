@@ -7,6 +7,8 @@ export const ToastComponent = () => {
     const category = useToastStore((state) => state.category)
     const message = useToastStore((state) => state.message)
     const toastId = useToastStore((state) => state.toastId)
+    const actionLabel = useToastStore((state) => state.actionLabel)
+    const onAction = useToastStore((state) => state.onAction)
     const hideToast = useToastStore((state) => state.hideToast)
 
     useEffect(() => {
@@ -27,5 +29,18 @@ export const ToastComponent = () => {
         return null
     }
 
-    return <ToastComponentView category={category} message={message} onClose={hideToast} />
+    const handleAction = (): void => {
+        onAction?.()
+        hideToast()
+    }
+
+    return (
+        <ToastComponentView
+            category={category}
+            message={message}
+            onClose={hideToast}
+            actionLabel={actionLabel}
+            onAction={onAction ? handleAction : undefined}
+        />
+    )
 }

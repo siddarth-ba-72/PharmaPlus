@@ -43,7 +43,12 @@ export const MedicineDetailsComponent = () => {
 
         try {
             const message = await saveCartMutation.mutateAsync(items)
-            showToast({ category: 'success', message })
+            showToast({
+                category: 'success',
+                message,
+                actionLabel: 'Go to Cart',
+                onAction: () => navigate('/pharma-plus/cart'),
+            })
         } catch (error) {
             showToast({
                 category: 'fail',
