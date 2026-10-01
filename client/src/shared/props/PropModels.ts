@@ -109,11 +109,13 @@ export interface MedicinesComponentViewProps {
     pageSize: number
     selectedCategory: string
     categoryOptions: string[]
+    searchTerm: string
     minPrice: string
     maxPrice: string
     loading: boolean
     error: string | null
     onCategoryChange: (category: string) => void
+    onSearchChange: (value: string) => void
     onMinPriceChange: (value: string) => void
     onMaxPriceChange: (value: string) => void
     onClearFilters: () => void

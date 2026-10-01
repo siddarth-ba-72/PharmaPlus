@@ -8,11 +8,13 @@ export const MedicinesComponentView = (props: MedicinesComponentViewProps) => {
         pageSize,
         selectedCategory,
         categoryOptions,
+        searchTerm,
         minPrice,
         maxPrice,
         loading,
         error,
         onCategoryChange,
+        onSearchChange,
         onMinPriceChange,
         onMaxPriceChange,
         onClearFilters,
@@ -34,47 +36,66 @@ export const MedicinesComponentView = (props: MedicinesComponentViewProps) => {
                 <h2 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">Medicines</h2>
                 <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{`Showing ${medicines.length} of ${pageSize} per page`}</p>
 
-                <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                    <label className="grid gap-1 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                        Category
-                        <select
-                            value={selectedCategory}
-                            onChange={(event) => onCategoryChange(event.target.value)}
-                            className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 outline-none ring-emerald-500 focus:ring-2 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200"
+                <div className="mt-4 space-y-3">
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                        <label className="grid gap-1 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                            Category
+                            <select
+                                value={selectedCategory}
+                                onChange={(event) => onCategoryChange(event.target.value)}
+                                className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 outline-none ring-emerald-500 focus:ring-2 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200"
+                            >
+                                <option value="all">All</option>
+                                {categoryOptions.map((category) => (
+                                    <option key={category} value={category}>
+                                        {category}
+                                    </option>
+                                ))}
+                            </select>
+                        </label>
+                        <label className="grid gap-1 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                            Min Price
+                            <input
+                                type="number"
+                                min="0"
+                                value={minPrice}
+                                onChange={(event) => onMinPriceChange(event.target.value)}
+                                placeholder="0"
+                                className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 outline-none ring-emerald-500 focus:ring-2 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200"
+                            />
+                        </label>
+                        <label className="grid gap-1 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                            Max Price
+                            <input
+                                type="number"
+                                min="0"
+                                value={maxPrice}
+                                onChange={(event) => onMaxPriceChange(event.target.value)}
+                                placeholder="1000"
+                                className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 outline-none ring-emerald-500 focus:ring-2 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200"
+                            />
+                        </label>
+                    </div>
+
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+                        <label className="grid gap-1 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400 sm:flex-1">
+                            Search
+                            <input
+                                type="search"
+                                value={searchTerm}
+                                onChange={(event) => onSearchChange(event.target.value)}
+                                placeholder="Search medicines"
+                                className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 outline-none ring-emerald-500 focus:ring-2 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200"
+                            />
+                        </label>
+                        <button
+                            type="button"
+                            onClick={onClearFilters}
+                            className="rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-emerald-400 hover:text-emerald-700 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200 dark:hover:border-emerald-500 dark:hover:text-emerald-300 sm:w-auto"
                         >
-                            <option value="all">All</option>
-                            {categoryOptions.map((category) => (
-                                <option key={category} value={category}>
-                                    {category}
-                                </option>
-                            ))}
-                        </select>
-                    </label>
-                    <label className="grid gap-1 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                        Min Price
-                        <input
-                            type="number"
-                            min="0"
-                            value={minPrice}
-                            onChange={(event) => onMinPriceChange(event.target.value)}
-                            placeholder="0"
-                            className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 outline-none ring-emerald-500 focus:ring-2 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200"
-                        />
-                    </label>
-                    <label className="grid gap-1 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                        Max Price
-                        <input
-                            type="number"
-                            min="0"
-                            value={maxPrice}
-                            onChange={(event) => onMaxPriceChange(event.target.value)}
-                            placeholder="1000"
-                            className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 outline-none ring-emerald-500 focus:ring-2 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200"
-                        />
-                    </label>
-                    <button type="button" onClick={onClearFilters} className="rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-emerald-400 hover:text-emerald-700 lg:self-end dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200 dark:hover:border-emerald-500 dark:hover:text-emerald-300">
-                        Clear Filters
-                    </button>
+                            Clear Filters
+                        </button>
+                    </div>
                 </div>
             </div>
 

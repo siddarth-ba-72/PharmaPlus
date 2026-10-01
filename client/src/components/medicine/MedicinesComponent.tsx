@@ -1,18 +1,31 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { MedicinesComponentView } from './MedicinesComponentView'
 import { MEDICINES_PER_PAGE } from '../../shared/constants/MedicinesConstants'
 import { useAllMedicineStocksQuery, useMedicinesQuery } from '../../shared/queries/MedicineQueries'
 import type { MedicineListItem, MedicinesComponentViewProps } from '../../shared/props/PropModels'
+import { matchesMedicineSearch } from '../../shared/utils/medicineSearch'
 
 export const MedicinesComponent = () => {
     const navigate = useNavigate()
     const [currentPage, setCurrentPage] = useState(1)
     const [selectedCategory, setSelectedCategory] = useState('all')
+    const [searchTerm, setSearchTerm] = useState('')
+    const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('')
     const [minPrice, setMinPrice] = useState('')
     const [maxPrice, setMaxPrice] = useState('')
     const medicinesQuery = useMedicinesQuery()
     const medicineStocksQuery = useAllMedicineStocksQuery()
+
+    useEffect(() => {
+        const timer = window.setTimeout(() => {
+            setDebouncedSearchTerm(searchTerm)
+        }, 400)
+
+        return () => {
+            window.clearTimeout(timer)
+        }
+    }, [searchTerm])
 
     const allMedicines = medicinesQuery.data ?? []
     const allMedicineStocks = medicineStocksQuery.data ?? []
@@ -52,6 +65,7 @@ export const MedicinesComponent = () => {
                 }
                 return medicine.category === selectedCategory
             })
+            .filter((medicine) => matchesMedicineSearch(medicine, debouncedSearchTerm))
             .filter((medicine) => {
                 const stock = stockByCode[medicine.medicineCode]
                 const price = stock?.price
@@ -74,7 +88,7 @@ export const MedicinesComponent = () => {
                 price: stockByCode[medicine.medicineCode]?.price ?? null,
                 quantity: stockByCode[medicine.medicineCode]?.quantity ?? null,
             }))
-    }, [allMedicines, maxPrice, minPrice, selectedCategory, stockByCode])
+    }, [allMedicines, debouncedSearchTerm, maxPrice, minPrice, selectedCategory, stockByCode])
 
     const totalPages = Math.max(1, Math.ceil(filteredMedicines.length / MEDICINES_PER_PAGE))
     const safeCurrentPage = Math.min(currentPage, totalPages)
@@ -100,6 +114,11 @@ export const MedicinesComponent = () => {
         setCurrentPage(1)
     }
 
+    const handleSearchChange = (value: string): void => {
+        setSearchTerm(value)
+        setCurrentPage(1)
+    }
+
     const handleMinPriceChange = (value: string): void => {
         setMinPrice(value)
         setCurrentPage(1)
@@ -112,6 +131,7 @@ export const MedicinesComponent = () => {
 
     const handleClearFilters = (): void => {
         setSelectedCategory('all')
+        setSearchTerm('')
         setMinPrice('')
         setMaxPrice('')
         setCurrentPage(1)
@@ -124,6 +144,7 @@ export const MedicinesComponent = () => {
         pageSize: MEDICINES_PER_PAGE,
         selectedCategory,
         categoryOptions,
+        searchTerm,
         minPrice,
         maxPrice,
         loading: medicinesQuery.isLoading || medicineStocksQuery.isLoading,
@@ -131,6 +152,7 @@ export const MedicinesComponent = () => {
             (medicinesQuery.error instanceof Error ? medicinesQuery.error.message : null) ??
             (medicineStocksQuery.error instanceof Error ? medicineStocksQuery.error.message : null),
         onCategoryChange: handleCategoryChange,
+        onSearchChange: handleSearchChange,
         onMinPriceChange: handleMinPriceChange,
         onMaxPriceChange: handleMaxPriceChange,
         onClearFilters: handleClearFilters,
