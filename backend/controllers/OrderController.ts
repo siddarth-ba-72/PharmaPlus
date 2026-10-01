@@ -36,6 +36,27 @@ export class OrderController extends AbstractController {
     });
 
     /*
+    * GET/ quick-refills/
+    * Authenticated Access
+    */
+    public quickRefills = AsyncRequestHandler.handleRequest(async (req: Request, res: Response): Promise<void> => {
+        const quickRefills = await this.orderService.fetchQuickRefillMedicines(req);
+        if (quickRefills == null || quickRefills.length === 0) {
+            this.logger.logInfo(`No frequently ordered medicines for user: ${req.body.user?.username}`);
+            return this.httpResponse.sendHttpResponse(
+                res, HttpResponseStatusCodesConstants.NO_CONTENT_SUCCESS, {
+                message: `No frequently ordered medicines for user: ${req.body.user?.username}`,
+                quickRefills: null
+            });
+        }
+        return this.httpResponse.sendHttpResponse(
+            res, HttpResponseStatusCodesConstants.RETRIEVED_SUCCESS, {
+            message: `Found ${quickRefills.length} frequently ordered medicines for user: ${req.body.user?.username}`,
+            quickRefills
+        });
+    });
+
+    /*
     * POST/ new-order/
     * Authenticated Access
     */

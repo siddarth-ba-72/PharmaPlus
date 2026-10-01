@@ -7,6 +7,7 @@ export const ApiEndpoints = {
     USER_CART: '/pp/webapp/api/carts/user-cart',
     NEW_ORDER: '/pp/webapp/api/orders/new-order',
     MY_ORDERS: '/pp/webapp/api/orders/my-orders',
+    QUICK_REFILLS: '/pp/webapp/api/orders/quick-refills',
     SAVE_MEDICINE: '/pp/webapp/api/medicines/save-medicine',
     MODIFY_STOCK: '/pp/webapp/api/stocks/modify-stock',
     MEDICINE_IMPORT_UPLOADS: '/pp/webapp/api/admin/medicine-imports/uploads',

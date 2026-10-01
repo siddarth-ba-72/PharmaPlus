@@ -136,6 +136,28 @@ export interface MedicineDetailsComponentViewProps {
     onBackClick: () => void
 }
 
+export interface QuickRefillItem {
+    medicineCode: string
+    medicineName: string
+    category: string
+    totalOrderedQuantity: number
+    price: number | null
+    availableStock: number | null
+    selectedQuantity: number
+}
+
+export interface QuickRefillsComponentViewProps {
+    isAuthenticated: boolean
+    items: QuickRefillItem[]
+    loading: boolean
+    error: string | null
+    savingMedicineCode: string | null
+    onIncrement: (medicineCode: string) => void
+    onDecrement: (medicineCode: string) => void
+    onAddToCart: (medicineCode: string) => void
+    onMedicineClick: (medicineCode: string) => void
+}
+
 export interface CartComponentViewProps {
     items: CartResponseDto[]
     loading: boolean

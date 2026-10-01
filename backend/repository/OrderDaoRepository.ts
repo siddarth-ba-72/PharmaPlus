@@ -1,5 +1,5 @@
 import { DataSource, Repository } from "typeorm";
-import { OrderDao } from "../dao/OrderDao";
+import { FrequentlyOrderedMedicine, OrderDao } from "../dao/OrderDao";
 import { OrderMedicineSchema } from "../schema/OrderMedicineSchema";
 import { OrderSchema } from "../schema/OrderSchema";
 import { DatabaseConnectionConfig } from "../config/DatabaseConnectionConfig";
@@ -54,6 +54,26 @@ export class OrderDaoRepository implements OrderDao {
                 }
             }
         });
+    }
+
+    public async findFrequentlyOrderedMedicinesByUserCode(userCode: string, limit: number): Promise<FrequentlyOrderedMedicine[]> {
+        const rows = await this.orderMedicineRepository
+            .createQueryBuilder("orderMedicine")
+            .innerJoin("orderMedicine.order", "order")
+            .innerJoin("order.user", "orderUser")
+            .innerJoin("orderMedicine.medicine", "medicine")
+            .where("orderUser.userCode = :userCode", { userCode })
+            .select("medicine.medicineCode", "medicineCode")
+            .addSelect("SUM(orderMedicine.quantity)", "totalQuantity")
+            .groupBy("medicine.medicineCode")
+            .orderBy("\"totalQuantity\"", "DESC")
+            .limit(limit)
+            .getRawMany();
+
+        return rows.map((row) => ({
+            medicineCode: row.medicineCode,
+            totalQuantity: Number(row.totalQuantity),
+        }));
     }
 
 }

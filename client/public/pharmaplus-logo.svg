@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256" role="img"
+    aria-labelledby="ppTitle ppDesc">
+    <title id="ppTitle">PharmaPlus</title>
+    <desc id="ppDesc">PharmaPlus logo: a medicine capsule crossed with a plus sign on a teal-blue gradient background.</desc>
+    <defs>
+        <linearGradient id="ppBg" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stop-color="#0f766e" />
+            <stop offset="100%" stop-color="#0369a1" />
+        </linearGradient>
+        <linearGradient id="ppPill" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stop-color="#ffffff" />
+            <stop offset="100%" stop-color="#bbf7d0" />
+        </linearGradient>
+    </defs>
+    <rect width="256" height="256" fill="url(#ppBg)" rx="48" />
+    <circle cx="206" cy="48" r="34" fill="#ffffff" fill-opacity="0.15" />
+    <circle cx="40" cy="214" r="46" fill="#34d399" fill-opacity="0.2" />
+
+    <!-- capsule -->
+    <g transform="rotate(-18 128 128)">
+        <rect x="58" y="98" width="140" height="60" rx="30" fill="url(#ppPill)" />
+        <path d="M128 98 h40 a30 30 0 0 1 0 60 h-40 z" fill="#0ea5e9" />
+        <line x1="128" y1="98" x2="128" y2="158" stroke="#0f766e" stroke-width="6" />
+    </g>
+
+    <!-- plus badge -->
+    <g>
+        <circle cx="128" cy="128" r="26" fill="#ffffff" />
+        <rect x="118" y="106" width="20" height="44" rx="6" fill="#0369a1" />
+        <rect x="106" y="118" width="44" height="20" rx="6" fill="#0369a1" />
+    </g>
+</svg>

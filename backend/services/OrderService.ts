@@ -15,6 +15,10 @@ import { UserOrderResponseModel } from "../models/OrderHttpModels/UserOrderRespo
 import { MedicineStockSchema } from "../schema/MedicineStockSchema";
 import { OrderRequestModel } from "../models/OrderHttpModels/OrderRequestModel";
 import { PaymentDaoRepository } from "../repository/PaymentDaoRepository";
+import { MedicineDaoRepository } from "../repository/MedicineDaoRepository";
+import { QuickRefillResponseModel } from "../models/OrderHttpModels/QuickRefillResponseModel";
+
+const QUICK_REFILL_MEDICINE_LIMIT = 5;
 
 export class OrderService {
 
@@ -23,6 +27,7 @@ export class OrderService {
     private cartRepository: CartDaoRepository;
     private stockRepository: StockDaoRepository;
     private paymentRepository: PaymentDaoRepository;
+    private medicineRepository: MedicineDaoRepository;
     private orderMapper: OrderMapper;
 
     constructor() {
@@ -31,6 +36,7 @@ export class OrderService {
         this.cartRepository = new CartDaoRepository();
         this.stockRepository = new StockDaoRepository();
         this.paymentRepository = new PaymentDaoRepository();
+        this.medicineRepository = new MedicineDaoRepository();
         this.orderMapper = new OrderMapper();
     }
 
@@ -50,6 +56,41 @@ export class OrderService {
                     return this.orderMapper.mapToUserOrderResponseModel(userOrder, orderMedicines);
                 }) ?? []
             );
+        } else {
+            throw new ResourceNotFoundException(
+                HttpResponseStatusCodesConstants.BAD_REQUEST_FAILURE,
+                "User not logged in"
+            );
+        }
+    }
+
+    public async fetchQuickRefillMedicines(req: Request): Promise<QuickRefillResponseModel[]> {
+        if (req.body.user) {
+            const user = await this.userRepository.findUserByUserName(req.body.user.username);
+            if (!user) {
+                throw new ResourceNotFoundException(
+                    HttpResponseStatusCodesConstants.BAD_REQUEST_FAILURE,
+                    "User not logged in"
+                );
+            }
+            const frequentlyOrderedMedicines = await this.orderRepository.findFrequentlyOrderedMedicinesByUserCode(user.userCode, QUICK_REFILL_MEDICINE_LIMIT);
+            const quickRefills: QuickRefillResponseModel[] = [];
+            for (const frequentItem of frequentlyOrderedMedicines) {
+                const medicine = await this.medicineRepository.findMedicineByMedicineCode(frequentItem.medicineCode);
+                if (!medicine) {
+                    continue;
+                }
+                const stock = await this.stockRepository.findMedicineStockByMedicineCode(frequentItem.medicineCode);
+                const quickRefillItem = new QuickRefillResponseModel();
+                quickRefillItem.medicineCode = medicine.medicineCode;
+                quickRefillItem.medicineName = medicine.medicineName;
+                quickRefillItem.category = medicine.category?.categoryName ?? "";
+                quickRefillItem.totalOrderedQuantity = frequentItem.totalQuantity;
+                quickRefillItem.price = stock?.price ?? null;
+                quickRefillItem.availableStock = stock?.quantity ?? null;
+                quickRefills.push(quickRefillItem);
+            }
+            return quickRefills;
         } else {
             throw new ResourceNotFoundException(
                 HttpResponseStatusCodesConstants.BAD_REQUEST_FAILURE,

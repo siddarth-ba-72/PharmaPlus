@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuthStore } from '../../store/AuthStore'
+import { QuickRefillsComponent } from './QuickRefillsComponent'
 
 type CarouselSlide = {
     title: string
@@ -31,10 +32,6 @@ const slides: CarouselSlide[] = [
 ]
 
 const keyHighlights = [
-    {
-        title: 'Quick Refills',
-        text: 'Re-order your regular medicines in a few taps.',
-    },
     {
         title: 'Safe Packaging',
         text: 'Secure and careful handling for every order.',
@@ -110,6 +107,8 @@ export const HomeComponent = () => {
                     </div>
                 </div>
             </section>
+
+            <QuickRefillsComponent />
 
             <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 {keyHighlights.map((item) => (

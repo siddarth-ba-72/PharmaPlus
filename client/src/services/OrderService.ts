@@ -1,5 +1,5 @@
 import { ApiEndpoints } from '../shared/api/ApiEndpoints'
-import type { OrderRequestDto, OrderResponseDto, UserOrderResponseDto } from '../shared/dto/OrderDto'
+import type { OrderRequestDto, OrderResponseDto, QuickRefillMedicineDto, UserOrderResponseDto } from '../shared/dto/OrderDto'
 import type { ResponseDto } from '../shared/dto/ResponseDto'
 import { AbstractService } from './AbstractService'
 import axios from 'axios'
@@ -12,6 +12,11 @@ type PlaceOrderResponseDto = {
 type UserOrdersResponseDto = {
     message?: string
     userOrders?: UserOrderResponseDto[]
+}
+
+type QuickRefillsResponseDto = {
+    message?: string
+    quickRefills?: QuickRefillMedicineDto[]
 }
 
 export class OrderService extends AbstractService {
@@ -87,6 +92,36 @@ export class OrderService extends AbstractService {
 
             const message = this.getBackendErrorMessage(error, 'Could not fetch user orders.')
             if (/no orders/i.test(message)) {
+                return []
+            }
+            throw new Error(message)
+        }
+    }
+
+    async getQuickRefillMedicines(): Promise<QuickRefillMedicineDto[]> {
+        try {
+            const response = await this.get<ResponseDto<QuickRefillsResponseDto> | ''>(ApiEndpoints.QUICK_REFILLS)
+
+            if (!response || typeof response === 'string') {
+                return []
+            }
+
+            if (!response.success) {
+                const backendMessage = response.data?.message ?? ''
+                if (/no frequently ordered/i.test(backendMessage)) {
+                    return []
+                }
+                throw new Error(backendMessage || 'Could not fetch frequently ordered medicines.')
+            }
+
+            return response.data.quickRefills ?? []
+        } catch (error) {
+            if (axios.isAxiosError(error) && error.response?.status === 204) {
+                return []
+            }
+
+            const message = this.getBackendErrorMessage(error, 'Could not fetch frequently ordered medicines.')
+            if (/no frequently ordered/i.test(message)) {
                 return []
             }
             throw new Error(message)
